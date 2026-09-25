@@ -14,14 +14,26 @@ export class DispositivoService {
     return this.http.get<DispositivoResponse[]>(this.url);
   }
 
-  crear(nombre: string, esComponenteCpu = false): Observable<DispositivoResponse> {
-    return this.http.post<DispositivoResponse>(this.url, { nombre, esComponenteCpu: String(esComponenteCpu) });
+  crear(nombre: string, esComponenteCpu = false, requiereSerie = true): Observable<DispositivoResponse> {
+    return this.http.post<DispositivoResponse>(this.url, {
+      nombre,
+      esComponenteCpu: String(esComponenteCpu),
+      requiereSerie: String(requiereSerie),
+    });
   }
 
-  actualizar(id: number, nombre: string, esComponenteCpu?: boolean): Observable<DispositivoResponse> {
+  actualizar(
+    id: number,
+    nombre: string,
+    esComponenteCpu?: boolean,
+    requiereSerie?: boolean,
+  ): Observable<DispositivoResponse> {
     const body: Record<string, string> = { nombre };
     if (esComponenteCpu !== undefined) {
       body['esComponenteCpu'] = String(esComponenteCpu);
+    }
+    if (requiereSerie !== undefined) {
+      body['requiereSerie'] = String(requiereSerie);
     }
     return this.http.put<DispositivoResponse>(`${this.url}/${id}`, body);
   }

@@ -375,16 +375,18 @@
     </div>
 
     @if (!selectedEsComponente) {
-      <div class="form-2col">
+      <div class="form-2col" [class.form-2col-solo]="!selectedRequiereSerie">
         <p-floatlabel variant="on">
           <input pInputText [(ngModel)]="modelo" class="w-full" />
           <label>Modelo *</label>
         </p-floatlabel>
 
-        <p-floatlabel variant="on">
-          <input pInputText [(ngModel)]="serie" class="w-full" />
-          <label>Serie</label>
-        </p-floatlabel>
+        @if (selectedRequiereSerie) {
+          <p-floatlabel variant="on">
+            <input pInputText [(ngModel)]="serie" class="w-full" />
+            <label>Serie *</label>
+          </p-floatlabel>
+        }
       </div>
     }
 

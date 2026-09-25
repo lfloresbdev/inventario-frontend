@@ -169,6 +169,10 @@ export class FisicoPage implements OnInit {
     return this.dispositivos().find(d => d.id === this.dispositivoId)?.esComponenteCpu ?? false;
   }
 
+  get selectedRequiereSerie(): boolean {
+    return this.dispositivos().find(d => d.id === this.dispositivoId)?.requiereSerie ?? true;
+  }
+
   private get _selectedNombre(): string {
     return this.dispositivos().find(d => d.id === this.dispositivoId)?.nombre?.trim().toUpperCase() ?? '';
   }
@@ -195,6 +199,12 @@ export class FisicoPage implements OnInit {
 
   onDispositivoChange(dispositivoId: number | undefined): void {
     this.marcaId = undefined;
+
+    // Si el dispositivo nuevo no exige serie el campo se oculta, así que se
+    // descarta lo escrito: quedaría invisible y aun así se enviaría al guardar.
+    const requiereSerie = this.dispositivos().find(d => d.id === dispositivoId)?.requiereSerie ?? true;
+    if (!requiereSerie) this.serie = '';
+
     if (dispositivoId == null) {
       this.marcasFiltradas.set([]);
       return;
@@ -565,6 +575,16 @@ export class FisicoPage implements OnInit {
       this.ms.add({ severity: 'warn', summary: 'Faltan datos', detail: 'Dispositivo y marca son obligatorios', life: 3000 });
       return;
     }
+    if (!this.selectedEsComponente && this.selectedRequiereSerie && !this.serie.trim()) {
+      this.ms.add({
+        severity: 'warn',
+        summary: 'Faltan datos',
+        detail: 'La serie es obligatoria para este dispositivo',
+        life: 3000,
+      });
+      return;
+    }
+
     if (!this.selectedEsComponente && !this.modelo.trim()) {
       this.ms.add({ severity: 'warn', summary: 'Faltan datos', detail: 'El modelo es obligatorio', life: 3000 });
       return;

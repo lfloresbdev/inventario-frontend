@@ -227,6 +227,11 @@
       <label for="disp-componente">Es componente de CPU (RAM, Disco, Procesador)</label>
     </div>
 
+    <div class="disp-componente-row">
+      <p-checkbox [(ngModel)]="dispRequiereSerie" [binary]="true" inputId="disp-serie" />
+      <label for="disp-serie">Requiere número de serie (desmarcar para cables, cargadores…)</label>
+    </div>
+
     <div class="drawer-footer">
       <p-button severity="secondary" [outlined]="true" (onClick)="drawerDisp = false"><app-icon name="close" size="0.9rem" />Cancelar</p-button>
       <p-button severity="primary" [disabled]="!dispNombre.trim()" (onClick)="guardarDisp()"><app-icon name="save" size="0.9rem" />Guardar</p-button>

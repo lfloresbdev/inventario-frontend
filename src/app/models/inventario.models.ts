@@ -49,6 +49,7 @@ export interface DispositivoResponse {
   id: number;
   nombre: string;
   esComponenteCpu: boolean;
+  requiereSerie: boolean;
   marcas: MarcaResponse[];
 }
 

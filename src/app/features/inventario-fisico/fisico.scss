@@ -194,6 +194,12 @@
   gap: 0.75rem;
 }
 
+/* Cuando el dispositivo no exige serie queda un solo campo en la fila:
+   se colapsa a una columna para que Modelo no se vea a medio ancho */
+.form-2col-solo {
+  grid-template-columns: 1fr;
+}
+
 .form-drawer {
   max-height: 85dvh;
   border-top-left-radius: 1rem;

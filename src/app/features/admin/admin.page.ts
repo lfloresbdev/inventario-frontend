@@ -85,6 +85,7 @@ export class AdminPage implements OnInit {
   editandoDispId: number | null = null;
   dispNombre = '';
   dispEsComponente = false;
+  dispRequiereSerie = true;
   dispositivosAbiertos: number[] = [];
   agregandoMarcaDispId: number | null = null;
   nuevaMarcaNombre = '';
@@ -128,6 +129,7 @@ export class AdminPage implements OnInit {
     this.editandoDispId = null;
     this.dispNombre = '';
     this.dispEsComponente = false;
+    this.dispRequiereSerie = true;
     this.drawerDisp = true;
   }
 
@@ -135,6 +137,7 @@ export class AdminPage implements OnInit {
     this.editandoDispId = d.id;
     this.dispNombre = d.nombre;
     this.dispEsComponente = d.esComponenteCpu;
+    this.dispRequiereSerie = d.requiereSerie;
     this.drawerDisp = true;
   }
 
@@ -217,8 +220,13 @@ export class AdminPage implements OnInit {
   guardarDisp(): void {
     if (!this.dispNombre.trim()) return;
     const op$ = this.editandoDispId == null
-      ? this.dispositivoService.crear(this.dispNombre.trim(), this.dispEsComponente)
-      : this.dispositivoService.actualizar(this.editandoDispId, this.dispNombre.trim(), this.dispEsComponente);
+      ? this.dispositivoService.crear(this.dispNombre.trim(), this.dispEsComponente, this.dispRequiereSerie)
+      : this.dispositivoService.actualizar(
+          this.editandoDispId,
+          this.dispNombre.trim(),
+          this.dispEsComponente,
+          this.dispRequiereSerie,
+        );
     op$.subscribe({
       next: () => {
         this.drawerDisp = false;
