@@ -1,0 +1,140 @@
+.w-full {
+  width: 100%;
+}
+
+.card {
+  padding: 1rem;
+  background: var(--p-surface-0);
+  border: 1px solid var(--p-surface-200);
+  border-radius: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.card-title {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--access-accent, inherit);
+}
+
+/* Los acentos .access-* viven en styles.scss (globales) */
+
+.access-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.access-icon {
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--access-accent, var(--neo-muted));
+  background: var(--neo-surface);
+  box-shadow: var(--neo-shadow);
+  transition: box-shadow 0.2s ease;
+}
+
+.card:hover .access-icon {
+  box-shadow: var(--neo-inset);
+}
+
+.card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+  color: var(--p-text-muted-color);
+}
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.card-actions {
+  display: flex;
+  gap: 0.125rem;
+}
+
+.muted-sm {
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+}
+
+.secret {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--p-surface-100);
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.secret-label {
+  color: var(--p-text-muted-color);
+  font-size: 0.75rem;
+}
+
+.secret-value {
+  font-family: monospace;
+  word-break: break-all;
+}
+
+.form-drawer {
+  max-height: 85dvh;
+  border-top-left-radius: 1rem;
+  border-top-right-radius: 1rem;
+}
+
+.password-float {
+  display: block;
+  position: relative;
+  width: 100%;
+
+  input.masked {
+    -webkit-text-security: disc;
+  }
+
+  input {
+    padding-right: 2.5rem;
+  }
+
+  .pwd-toggle {
+    position: absolute;
+    top: 50%;
+    right: 0.5rem;
+    transform: translateY(-50%);
+    display: grid;
+    place-items: center;
+    padding: 0.25rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--p-text-muted-color);
+    z-index: 1;
+
+    &:hover {
+      color: var(--p-text-color);
+    }
+
+    svg {
+      fill: currentcolor;
+    }
+  }
+}

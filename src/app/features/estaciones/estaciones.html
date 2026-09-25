@@ -1,0 +1,316 @@
+<p-toast position="top-right" />
+<p-confirm-dialog />
+
+<header class="page-header">
+  <h1>Estaciones</h1>
+  <div class="header-actions">
+    <p-button severity="secondary" [outlined]="true" (onClick)="toggleInactivas()">
+      <app-icon name="restore" size="1rem" />
+      <span>{{ verInactivas ? 'Ocultar bajas' : 'Ver bajas' }}</span>
+    </p-button>
+    <p-button severity="primary" (onClick)="abrirNueva()">
+      <svg data-p-icon="plus" style="width: 1rem; height: 1rem"></svg>
+      <span>Nueva</span>
+    </p-button>
+  </div>
+</header>
+
+<section class="page-content">
+  @if (loading()) {
+    <div class="list-grid">
+      @for (i of [1, 2, 3, 4]; track i) {
+        <p-skeleton height="7rem" borderRadius="0.75rem" />
+      }
+    </div>
+  } @else if (estaciones().length === 0) {
+    <div class="empty-state">
+      <svg data-p-icon="building" style="width: 3rem; height: 3rem"></svg>
+      <p>No hay estaciones registradas</p>
+      <p-button severity="secondary" (onClick)="abrirNueva()">Crear la primera</p-button>
+    </div>
+  } @else {
+    <div class="list-grid">
+      @for (est of estaciones(); track est.id) {
+        <a [routerLink]="['/estaciones', est.id]" class="station-card">
+          <div class="station-card-top">
+            <span class="station-name">{{ est.nombre }}</span>
+            <p-tag [value]="est.local?.nombre" severity="info" />
+          </div>
+          <div class="station-card-bottom">
+            <div class="station-actions" (click)="$event.stopPropagation(); $event.preventDefault()">
+              <p-button [text]="true" [rounded]="true" [iconOnly]="true" severity="secondary" (onClick)="abrirAsignar(est)">
+                <svg data-p-icon="link" style="width: 1rem; height: 1rem"></svg>
+              </p-button>
+              <p-button [text]="true" [rounded]="true" [iconOnly]="true" severity="secondary" (onClick)="abrirEditar(est)">
+                <svg data-p-icon="pencil" style="width: 1rem; height: 1rem"></svg>
+              </p-button>
+              <p-button [text]="true" [rounded]="true" [iconOnly]="true" severity="danger" (onClick)="eliminar(est)">
+                <svg data-p-icon="trash" style="width: 1rem; height: 1rem"></svg>
+              </p-button>
+            </div>
+          </div>
+        </a>
+      }
+    </div>
+  }
+
+  @if (verInactivas) {
+    <div class="inactive-section">
+      <span class="inactive-title">Estaciones dadas de baja</span>
+      @if (estacionesInactivas().length === 0) {
+        <p class="muted-sm">Sin estaciones dadas de baja</p>
+      } @else {
+        <div class="list-grid">
+          @for (est of estacionesInactivas(); track est.id) {
+            <div class="station-card inactive">
+              <div class="station-card-top">
+                <span class="station-name">{{ est.nombre }}</span>
+                <p-tag value="Baja" severity="danger" />
+              </div>
+              <div class="station-card-bottom">
+                <span class="station-id">{{ est.local?.nombre }}</span>
+                <div class="station-actions">
+                  <p-button severity="success" [text]="true" size="small" (onClick)="reactivar(est)">
+                    <app-icon name="restore" size="0.9rem" />
+                    <span>Reactivar</span>
+                  </p-button>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</section>
+
+<!-- ===== DRAWER ASIGNAR ITEM ===== -->
+<p-drawer
+  [(visible)]="asignarDrawerVisible"
+  [header]="'Asignar item a ' + (estacionTarget?.nombre ?? 'estación')"
+  position="bottom"
+  styleClass="form-drawer"
+  [showCloseIcon]="true"
+>
+  <div class="form-grid">
+    <p-floatlabel variant="on">
+      <p-select
+        [options]="tipoInventarioOptions"
+        optionLabel="label"
+        optionValue="value"
+        [(ngModel)]="tipoInventario"
+        (onChange)="onTipoInventarioChange()"
+        class="w-full"
+      />
+      <label>Tipo de inventario *</label>
+    </p-floatlabel>
+
+    <p-floatlabel variant="on">
+      <p-select
+        [options]="asignarItemsDisponibles()"
+        optionLabel="label"
+        optionValue="id"
+        [(ngModel)]="itemSeleccionadoId"
+        [disabled]="!tipoInventario || loadingAsignarItems"
+        [placeholder]="loadingAsignarItems ? 'Cargando...' : asignarItemsDisponibles().length === 0 && tipoInventario ? 'Sin items disponibles' : '—'"
+        class="w-full"
+      />
+      <label>Item *</label>
+    </p-floatlabel>
+
+    <div class="form-actions">
+      <p-button severity="secondary" [outlined]="true" (onClick)="asignarDrawerVisible = false"><app-icon name="close" size="0.9rem" />Cancelar</p-button>
+      <p-button severity="primary" (onClick)="confirmarAsignar()"><app-icon name="link" size="0.9rem" />Asignar</p-button>
+    </div>
+  </div>
+</p-drawer>
+
+<!-- ===== DRAWER CREAR ESTACIÓN ===== -->
+<p-drawer
+  [(visible)]="drawerVisible"
+  header="Nueva estación"
+  position="bottom"
+  styleClass="form-drawer"
+  [showCloseIcon]="true"
+>
+  <div class="form-grid">
+    @if (isAdmin) {
+      <p-floatlabel variant="on">
+        <p-select
+          id="est-empresa"
+          [options]="empresaOptions"
+          optionLabel="label"
+          optionValue="value"
+          [(ngModel)]="empresaForm"
+          (onChange)="onEmpresaChange()"
+          class="w-full"
+        />
+        <label for="est-empresa">Empresa *</label>
+      </p-floatlabel>
+    }
+
+    <div class="form-2col">
+      <p-floatlabel variant="on">
+        <p-select
+          id="est-local"
+          [options]="localesDisponibles()"
+          optionLabel="nombre"
+          optionValue="id"
+          [(ngModel)]="localId"
+          (onChange)="onLocalChange()"
+          [disabled]="localesDisponibles().length === 0"
+          class="w-full"
+        />
+        <label for="est-local">Local *</label>
+      </p-floatlabel>
+
+      <p-floatlabel variant="on">
+        <p-select
+          id="est-ubicacion"
+          [options]="ubicacionesDisponibles()"
+          optionLabel="nombre"
+          optionValue="id"
+          [(ngModel)]="ubicacionFisicaId"
+          [disabled]="ubicacionesDisponibles().length === 0"
+          class="w-full"
+        />
+        <label for="est-ubicacion">Ubicación física *</label>
+      </p-floatlabel>
+    </div>
+
+    <p-floatlabel variant="on">
+      <p-select
+        [options]="modoOptions"
+        optionLabel="label"
+        optionValue="value"
+        [(ngModel)]="modoCrear"
+        (onChange)="onModoChange()"
+        class="w-full"
+      />
+      <label>Configuración *</label>
+    </p-floatlabel>
+
+    @if (loadingItems) {
+      <p class="muted">Cargando items disponibles...</p>
+    } @else if (modoCrear === 'ESCRITORIO') {
+      <div class="form-2col">
+        <div class="form-field">
+          <label class="field-label">CPU *</label>
+          <p-select [options]="cpuOpciones()" optionLabel="label" optionValue="id"
+            [(ngModel)]="selCpu" [placeholder]="cpuOpciones().length === 0 ? 'Sin stock' : 'Seleccionar'" class="w-full" />
+        </div>
+        <div class="form-field">
+          <label class="field-label">Monitor *</label>
+          <p-select [options]="monitorOpciones()" optionLabel="label" optionValue="id"
+            [(ngModel)]="selMonitor" [placeholder]="monitorOpciones().length === 0 ? 'Sin stock' : 'Seleccionar'" class="w-full" />
+        </div>
+      </div>
+      <div class="form-2col">
+        <div class="form-field">
+          <label class="field-label">Teclado *</label>
+          <p-select [options]="tecladoOpciones()" optionLabel="label" optionValue="id"
+            [(ngModel)]="selTeclado" [placeholder]="tecladoOpciones().length === 0 ? 'Sin stock' : 'Seleccionar'" class="w-full" />
+        </div>
+        <div class="form-field">
+          <label class="field-label">Mouse *</label>
+          <p-select [options]="mouseOpciones()" optionLabel="label" optionValue="id"
+            [(ngModel)]="selMouse" [placeholder]="mouseOpciones().length === 0 ? 'Sin stock' : 'Seleccionar'" class="w-full" />
+        </div>
+      </div>
+      <div class="form-field">
+        <label class="field-label">Audífonos *</label>
+        <p-select [options]="aufifonosOpciones()" optionLabel="label" optionValue="id"
+          [(ngModel)]="selAudifonos" [placeholder]="aufifonosOpciones().length === 0 ? 'Sin stock' : 'Seleccionar'" class="w-full" />
+      </div>
+      <div class="form-2col">
+        <div class="form-field">
+          <label class="field-label">Cable poder 1 *</label>
+          <p-select [options]="cablePoder1Opciones" optionLabel="label" optionValue="id"
+            [(ngModel)]="selCablePoder1" [placeholder]="cablePoder1Opciones.length === 0 ? 'Sin stock' : 'Seleccionar'" class="w-full" />
+        </div>
+        <div class="form-field">
+          <label class="field-label">Cable poder 2 *</label>
+          <p-select [options]="cablePoder2Opciones" optionLabel="label" optionValue="id"
+            [(ngModel)]="selCablePoder2" [placeholder]="cablePoder2Opciones.length === 0 ? 'Sin stock' : 'Seleccionar'" class="w-full" />
+        </div>
+      </div>
+      <div class="form-field">
+        <label class="field-label">Cable VGA o HDMI *</label>
+        <p-select [options]="cableVideoOpciones()" optionLabel="label" optionValue="id"
+          [(ngModel)]="selCableVideo" [placeholder]="cableVideoOpciones().length === 0 ? 'Sin stock' : 'Seleccionar'" class="w-full" />
+      </div>
+    } @else {
+      <div class="form-2col">
+        <div class="form-field">
+          <label class="field-label">Laptop *</label>
+          <p-select [options]="laptopOpciones()" optionLabel="label" optionValue="id"
+            [(ngModel)]="selLaptop" [placeholder]="laptopOpciones().length === 0 ? 'Sin stock' : 'Seleccionar'" class="w-full" />
+        </div>
+        <div class="form-field">
+          <label class="field-label">Cargador *</label>
+          <p-select [options]="cargadorOpciones()" optionLabel="label" optionValue="id"
+            [(ngModel)]="selCargador" [placeholder]="cargadorOpciones().length === 0 ? 'Sin stock' : 'Seleccionar'" class="w-full" />
+        </div>
+      </div>
+    }
+
+    <div class="form-actions">
+      <p-button severity="secondary" [outlined]="true" (onClick)="drawerVisible = false"><app-icon name="close" size="0.9rem" />Cancelar</p-button>
+      <p-button severity="primary" (onClick)="guardar()">Crear estación</p-button>
+    </div>
+  </div>
+</p-drawer>
+
+<!-- ===== DRAWER EDITAR ESTACIÓN ===== -->
+<p-drawer
+  [(visible)]="editDrawerVisible"
+  header="Editar estación"
+  position="bottom"
+  styleClass="form-drawer"
+  [showCloseIcon]="true"
+>
+  <div class="form-grid">
+    @if (isAdmin) {
+      <p-floatlabel variant="on">
+        <p-select
+          [options]="empresaOptions"
+          optionLabel="label"
+          optionValue="value"
+          [(ngModel)]="editEmpresaForm"
+          class="w-full"
+        />
+        <label>Empresa *</label>
+      </p-floatlabel>
+    }
+
+    <p-floatlabel variant="on">
+      <p-select
+        [options]="editLocalesDisponibles()"
+        optionLabel="nombre"
+        optionValue="id"
+        [(ngModel)]="editLocalId"
+        (onChange)="onEditLocalChange()"
+        [disabled]="editLocalesDisponibles().length === 0"
+        class="w-full"
+      />
+      <label>Local *</label>
+    </p-floatlabel>
+
+    <p-floatlabel variant="on">
+      <p-select
+        [options]="editUbicacionesDisponibles()"
+        optionLabel="nombre"
+        optionValue="id"
+        [(ngModel)]="editUbicacionFisicaId"
+        [disabled]="editUbicacionesDisponibles().length === 0"
+        class="w-full"
+      />
+      <label>Ubicación física *</label>
+    </p-floatlabel>
+
+    <div class="form-actions">
+      <p-button severity="secondary" [outlined]="true" (onClick)="editDrawerVisible = false"><app-icon name="close" size="0.9rem" />Cancelar</p-button>
+      <p-button severity="primary" (onClick)="guardarEdicion()"><app-icon name="save" size="0.9rem" />Guardar</p-button>
+    </div>
+  </div>
+</p-drawer>

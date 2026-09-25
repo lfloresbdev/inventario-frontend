@@ -1,0 +1,620 @@
+﻿<p-toast position="top-right" />
+<p-confirm-dialog />
+
+<header class="page-header">
+  <h1>Inventario Físico</h1>
+  <p-button severity="primary" (onClick)="abrirNueva()">
+    <svg data-p-icon="plus" style="width: 1rem; height: 1rem"></svg>
+    <span>Nuevo</span>
+  </p-button>
+</header>
+
+<section class="page-content">
+  <div class="toolbar-row">
+    <p-select
+      [options]="locales()"
+      optionLabel="nombre"
+      optionValue="id"
+      [(ngModel)]="filtroLocalId"
+      placeholder="Local"
+      [showClear]="true"
+      (onChange)="onFiltroLocalChange()"
+      style="min-width: 9rem"
+    />
+    <p-select
+      [options]="ubicaciones()"
+      optionLabel="nombre"
+      optionValue="id"
+      [(ngModel)]="filtroUbicacionId"
+      placeholder="Ubicación"
+      [showClear]="true"
+      [disabled]="ubicaciones().length === 0"
+      (onChange)="aplicarFiltros()"
+      style="min-width: 9rem"
+    />
+    <p-select
+      [options]="dispositivos()"
+      optionLabel="nombre"
+      optionValue="id"
+      [(ngModel)]="filtroDispositivoId"
+      placeholder="Dispositivo"
+      [showClear]="true"
+      (onChange)="aplicarFiltros()"
+      style="min-width: 9rem"
+    />
+    @if (!loading()) {
+      <span class="item-count">{{ items().length }} {{ items().length === 1 ? 'item' : 'items' }}</span>
+    }
+  </div>
+
+  @if (loading()) {
+    <div class="list-grid">
+      @for (i of [1, 2, 3, 4]; track i) {
+        <p-skeleton height="8rem" borderRadius="0.75rem" />
+      }
+    </div>
+  } @else if (items().length === 0) {
+    <div class="empty-state">
+      <svg data-p-icon="server" style="width: 3rem; height: 3rem"></svg>
+      <p>No hay elementos</p>
+    </div>
+  } @else {
+    <div class="list-grid">
+      @for (item of items(); track item.id) {
+        <div class="card device-card card-clickable" [class]="'device-card device-' + deviceVisualType(item)" (click)="abrirDetalle(item)">
+          <div class="card-top">
+            <div class="device-heading">
+              <div class="device-icon" aria-hidden="true">
+                <app-icon [name]="deviceVisualType(item)" size="30px" />
+              </div>
+              <div>
+                <span class="card-title">{{ item.dispositivo?.nombre }}</span>
+                @if (item.hostname) {
+                  <span class="device-subtitle">{{ item.hostname }}</span>
+                }
+              </div>
+            </div>
+            <span class="brand-badge">{{ item.marca?.nombre }}</span>
+          </div>
+          <div class="card-footer" (click)="$event.stopPropagation()">
+            @if (item.estacionId) {
+              <p-tag [value]="estacionNombre(item.estacionId)" severity="info" />
+            } @else if (item.parentId) {
+              <p-tag
+                [value]="item.parentHostname ? 'En CPU · ' + item.parentHostname : 'En CPU'"
+                severity="warn"
+              />
+            } @else {
+              <span class="muted-sm">En almacén</span>
+            }
+            <div class="card-actions">
+              @if (!item.estacionId && !item.parentId) {
+                <p-button [text]="true" [rounded]="true" [iconOnly]="true" severity="secondary" (onClick)="abrirAsignarEstacion(item)">
+                  <svg data-p-icon="link" style="width: 1rem; height: 1rem"></svg>
+                </p-button>
+              }
+              @if (item.estacionId) {
+                <p-button [text]="true" [rounded]="true" [iconOnly]="true" severity="danger" (onClick)="desasignar(item)">
+                  <svg data-p-icon="times-circle" style="width: 1rem; height: 1rem"></svg>
+                </p-button>
+              }
+              <p-button [text]="true" [rounded]="true" [iconOnly]="true" severity="danger" (onClick)="eliminar(item)">
+                <svg data-p-icon="trash" style="width: 1rem; height: 1rem"></svg>
+              </p-button>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</section>
+
+<p-drawer
+  [(visible)]="detalleVisible"
+  [header]="itemDetalle()?.dispositivo?.nombre ?? 'Detalle'"
+  position="bottom"
+  styleClass="form-drawer"
+  [showCloseIcon]="true"
+  (onHide)="itemDetalle.set(null)"
+>
+  @if (itemDetalle(); as det) {
+    <div class="detalle-body">
+      <div class="detalle-marca">
+        <p-tag [value]="det.marca?.nombre" severity="secondary" />
+        @if (det.estacionId) {
+          <p-tag [value]="estacionNombre(det.estacionId)" severity="info" />
+        }
+        @if (det.parentId) {
+          <p-tag value="En CPU" severity="warn" />
+        }
+      </div>
+
+      <div class="detalle-fields">
+        @if (det.hostname) {
+          <div class="detalle-field">
+            <span class="detalle-label">Hostname</span>
+            <span class="detalle-value">{{ det.hostname }}</span>
+          </div>
+        }
+        @if (det.serie) {
+          <div class="detalle-field">
+            <span class="detalle-label">N° de serie</span>
+            <span class="detalle-value">{{ det.serie }}</span>
+          </div>
+        }
+        @if (det.modelo) {
+          <div class="detalle-field">
+            <span class="detalle-label">Modelo</span>
+            <span class="detalle-value">{{ det.modelo }}</span>
+          </div>
+        }
+        @if (det.procesador) {
+          <div class="detalle-field">
+            <span class="detalle-label">Procesador</span>
+            <span class="detalle-value">{{ det.procesador }}</span>
+          </div>
+        }
+        @if (det.ramTipo && det.ramEspacio) {
+          <div class="detalle-field">
+            <span class="detalle-label">RAM</span>
+            <span class="detalle-value">{{ det.ramEspacio }} GB {{ det.ramTipo | ramTipo }}</span>
+          </div>
+        }
+        @if (det.discoTipo && det.discoEspacio) {
+          <div class="detalle-field">
+            <span class="detalle-label">Disco</span>
+            <span class="detalle-value">{{ det.discoEspacio }} GB {{ det.discoTipo | discoTipo }}</span>
+          </div>
+        }
+        @if (det.pulgadas) {
+          <div class="detalle-field">
+            <span class="detalle-label">Pulgadas</span>
+            <span class="detalle-value">{{ det.pulgadas }}"</span>
+          </div>
+        }
+      </div>
+
+      @if (isCpu) {
+        <div class="componentes-section">
+          <div class="componentes-header">
+            <span class="componentes-title">Componentes</span>
+          </div>
+          @if (componentesCpu().length === 0) {
+            <p class="comp-empty">Sin componentes registrados</p>
+          } @else {
+            @for (comp of componentesCpu(); track comp.id) {
+              <div class="comp-item comp-clickable" (click)="abrirDetalleComponente(comp)">
+                <div class="comp-info">
+                  <span class="comp-nombre">{{ comp.dispositivo?.nombre }}</span>
+                  <span class="comp-desc">{{ comp.marca?.nombre }}{{ comp.modelo ? ' · ' + comp.modelo : '' }}{{ comp.serie ? ' · ' + comp.serie : '' }}</span>
+                </div>
+                <p-button [text]="true" [rounded]="true" [iconOnly]="true" severity="danger" (onClick)="$event.stopPropagation(); liberarComponente(comp)">
+                  <svg data-p-icon="times-circle" style="width: 0.9rem; height: 0.9rem"></svg>
+                </p-button>
+              </div>
+            }
+          }
+          <p-button class="comp-add-btn" severity="secondary" [outlined]="true" size="small" (onClick)="abrirAgregarComponente()">
+            <svg data-p-icon="plus" style="width: 0.85rem; height: 0.85rem"></svg>
+            Agregar componente
+          </p-button>
+        </div>
+      }
+
+      <div class="form-actions">
+        <p-button severity="secondary" [outlined]="true" (onClick)="detalleVisible = false">Cerrar</p-button>
+        <p-button severity="primary" (onClick)="abrirEditarDesdeDetalle()">
+          <svg data-p-icon="pencil" style="width: 1rem; height: 1rem"></svg>
+          Editar
+        </p-button>
+      </div>
+    </div>
+  }
+</p-drawer>
+
+<p-drawer
+  [(visible)]="componenteDetalleVisible"
+  [header]="componenteDetalle()?.dispositivo?.nombre ?? 'Componente'"
+  position="bottom"
+  styleClass="form-drawer"
+  [showCloseIcon]="true"
+  (onHide)="componenteDetalle.set(null)"
+>
+  @if (componenteDetalle(); as comp) {
+    <div class="detalle-body">
+      <div class="detalle-marca">
+        <p-tag [value]="comp.marca?.nombre" severity="secondary" />
+        @if (comp.parentHostname) {
+          <p-tag [value]="'En CPU · ' + comp.parentHostname" severity="warn" />
+        }
+      </div>
+
+      <div class="detalle-fields">
+        @if (comp.modelo) {
+          <div class="detalle-field">
+            <span class="detalle-label">Modelo</span>
+            <span class="detalle-value">{{ comp.modelo }}</span>
+          </div>
+        }
+        @if (comp.serie) {
+          <div class="detalle-field">
+            <span class="detalle-label">N° de serie</span>
+            <span class="detalle-value">{{ comp.serie }}</span>
+          </div>
+        }
+        @if (comp.procesador) {
+          <div class="detalle-field">
+            <span class="detalle-label">Procesador</span>
+            <span class="detalle-value">{{ comp.procesador }}</span>
+          </div>
+        }
+        @if (comp.ramTipo || comp.ramEspacio) {
+          <div class="detalle-field">
+            <span class="detalle-label">RAM</span>
+            <span class="detalle-value">{{ comp.ramEspacio }} GB {{ comp.ramTipo | ramTipo }}</span>
+          </div>
+        }
+        @if (comp.discoTipo || comp.discoEspacio) {
+          <div class="detalle-field">
+            <span class="detalle-label">Disco</span>
+            <span class="detalle-value">{{ comp.discoEspacio }} GB {{ comp.discoTipo | discoTipo }}</span>
+          </div>
+        }
+      </div>
+
+      <div class="form-actions">
+        <p-button severity="secondary" [outlined]="true" (onClick)="componenteDetalleVisible = false">Cerrar</p-button>
+      </div>
+    </div>
+  }
+</p-drawer>
+
+<p-drawer
+  [(visible)]="componenteDrawerVisible"
+  header="Agregar componente"
+  position="bottom"
+  styleClass="form-drawer"
+  [showCloseIcon]="true"
+>
+  <div class="form-grid">
+    <p-floatlabel variant="on">
+      <p-select
+        [options]="itemsLibresOpciones()"
+        optionLabel="label"
+        optionValue="id"
+        [(ngModel)]="componenteSelId"
+        class="w-full"
+        placeholder="—"
+        [filter]="true"
+        filterBy="label"
+      />
+      <label>Item libre *</label>
+    </p-floatlabel>
+    <div class="form-actions">
+      <p-button severity="secondary" [outlined]="true" (onClick)="componenteDrawerVisible = false"><app-icon name="close" size="0.9rem" />Cancelar</p-button>
+      <p-button severity="primary" (onClick)="confirmarAgregarComponente()">Agregar</p-button>
+    </div>
+  </div>
+</p-drawer>
+
+<p-drawer
+  [(visible)]="asignarDrawerVisible"
+  header="Asignar a estación"
+  position="bottom"
+  styleClass="form-drawer"
+  [showCloseIcon]="true"
+>
+  <div class="form-grid">
+    <p-floatlabel variant="on">
+      <p-select
+        [options]="estaciones()"
+        optionLabel="nombre"
+        optionValue="id"
+        [(ngModel)]="estacionAsignarId"
+        class="w-full"
+        placeholder="—"
+      />
+      <label>Estación *</label>
+    </p-floatlabel>
+    <div class="form-actions">
+      <p-button severity="secondary" [outlined]="true" (onClick)="asignarDrawerVisible = false"><app-icon name="close" size="0.9rem" />Cancelar</p-button>
+      <p-button severity="primary" (onClick)="confirmarAsignarEstacion()"><app-icon name="link" size="0.9rem" />Asignar</p-button>
+    </div>
+  </div>
+</p-drawer>
+
+<p-drawer
+  [(visible)]="drawerVisible"
+  [header]="editandoId ? 'Editar elemento' : 'Nuevo elemento'"
+  position="bottom"
+  styleClass="form-drawer"
+  [showCloseIcon]="true"
+>
+  <div class="form-grid">
+    @if (isAdmin) {
+      <p-floatlabel variant="on">
+        <p-select
+          [options]="empresaOptions"
+          optionLabel="label"
+          optionValue="value"
+          [(ngModel)]="empresaForm"
+          (onChange)="onEmpresaChange()"
+          class="w-full"
+        />
+        <label>Empresa *</label>
+      </p-floatlabel>
+    }
+
+    <div class="form-2col">
+      <p-floatlabel variant="on">
+        <p-select
+          [options]="dispositivos()"
+          optionLabel="nombre"
+          optionValue="id"
+          [(ngModel)]="dispositivoId"
+          (ngModelChange)="onDispositivoChange($event)"
+          class="w-full"
+          [filter]="true"
+          filterBy="nombre"
+        />
+        <label>Dispositivo *</label>
+      </p-floatlabel>
+
+      <p-floatlabel variant="on">
+        <p-select
+          [options]="marcasParaForm"
+          optionLabel="nombre"
+          optionValue="id"
+          [(ngModel)]="marcaId"
+          class="w-full"
+          [filter]="true"
+          filterBy="nombre"
+        />
+        <label>Marca *</label>
+      </p-floatlabel>
+    </div>
+
+    @if (!selectedEsComponente) {
+      <div class="form-2col">
+        <p-floatlabel variant="on">
+          <input pInputText [(ngModel)]="modelo" class="w-full" />
+          <label>Modelo *</label>
+        </p-floatlabel>
+
+        <p-floatlabel variant="on">
+          <input pInputText [(ngModel)]="serie" class="w-full" />
+          <label>Serie</label>
+        </p-floatlabel>
+      </div>
+    }
+
+    @if (selectedDispositivoEsCpu) {
+      <p-floatlabel variant="on">
+        <input pInputText [(ngModel)]="hostname" class="w-full" />
+        <label>Hostname</label>
+      </p-floatlabel>
+    }
+
+    @if (selectedDispositivoEsCpu && !editandoId) {
+      <div class="cpu-modo-section">
+        <span class="cpu-modo-label">Tipo de CPU</span>
+        <div class="cpu-modo-btns">
+          <button
+            type="button"
+            class="cpu-modo-btn"
+            [class.active]="cpuModo === 'armada'"
+            (click)="cpuModo = 'armada'; onCpuModoChange()"
+          >Armada</button>
+          <button
+            type="button"
+            class="cpu-modo-btn"
+            [class.active]="cpuModo === 'porarmar'"
+            (click)="cpuModo = 'porarmar'; onCpuModoChange()"
+          >Por armar</button>
+        </div>
+      </div>
+
+      @if (cpuModo === 'porarmar') {
+        <div class="componentes-crear-section">
+          <span class="componentes-crear-title">Componentes (de inventario libre)</span>
+          <p-floatlabel variant="on">
+            <p-select
+              [options]="itemsRamOpciones"
+              optionLabel="label"
+              optionValue="id"
+              [(ngModel)]="compRamId"
+              [showClear]="true"
+              class="w-full"
+              placeholder="—"
+            />
+            <label>RAM</label>
+          </p-floatlabel>
+          <p-floatlabel variant="on">
+            <p-select
+              [options]="itemsProcesadorOpciones"
+              optionLabel="label"
+              optionValue="id"
+              [(ngModel)]="compProcesadorId"
+              [showClear]="true"
+              class="w-full"
+              placeholder="—"
+            />
+            <label>Procesador</label>
+          </p-floatlabel>
+          <p-floatlabel variant="on">
+            <p-select
+              [options]="itemsDiscoOpciones"
+              optionLabel="label"
+              optionValue="id"
+              [(ngModel)]="compDiscoId"
+              [showClear]="true"
+              class="w-full"
+              placeholder="—"
+            />
+            <label>Disco</label>
+          </p-floatlabel>
+        </div>
+      }
+
+      @if (cpuModo === 'armada') {
+        <div class="componentes-crear-section">
+          <div class="componentes-crear-header">
+            <span class="componentes-crear-title">Componentes</span>
+            <p-button severity="secondary" [outlined]="true" size="small" (onClick)="agregarComponenteArmada()">
+              <svg data-p-icon="plus" style="width: 0.8rem; height: 0.8rem"></svg>
+              Agregar
+            </p-button>
+          </div>
+
+          @for (comp of armadaComponentes; track $index) {
+            <div class="comp-form-item">
+              <div class="comp-form-header">
+                <span class="comp-form-num">Componente {{ $index + 1 }}</span>
+                <p-button [text]="true" [rounded]="true" [iconOnly]="true" severity="danger" size="small" (onClick)="quitarComponenteArmada($index)">
+                  <svg data-p-icon="trash" style="width: 0.8rem; height: 0.8rem"></svg>
+                </p-button>
+              </div>
+
+              <div class="form-2col">
+                <p-floatlabel variant="on">
+                  <p-select
+                    [options]="dispositivosComponentes()"
+                    optionLabel="nombre"
+                    optionValue="id"
+                    [(ngModel)]="comp.dispositivoId"
+                    (onChange)="onComponenteDispositivoChange($index)"
+                    class="w-full"
+                    [filter]="true"
+                    filterBy="nombre"
+                  />
+                  <label>Dispositivo *</label>
+                </p-floatlabel>
+                <p-floatlabel variant="on">
+                  <p-select
+                    [options]="comp.marcas ?? []"
+                    optionLabel="nombre"
+                    optionValue="id"
+                    [(ngModel)]="comp.marcaId"
+                    class="w-full"
+                    [filter]="true"
+                    filterBy="nombre"
+                  />
+                  <label>Marca *</label>
+                </p-floatlabel>
+              </div>
+
+              @if (esRam(comp.dispositivoId)) {
+                <div class="form-2col">
+                  <p-floatlabel variant="on">
+                    <p-select [options]="ramOptions" optionLabel="label" optionValue="value" [(ngModel)]="comp.ramTipo" class="w-full" />
+                    <label>Tipo RAM</label>
+                  </p-floatlabel>
+                  <p-floatlabel variant="on">
+                    <p-select [options]="ramCapacidadOptions" optionLabel="label" optionValue="value" [(ngModel)]="comp.ramEspacio" class="w-full" />
+                    <label>Capacidad (GB)</label>
+                  </p-floatlabel>
+                </div>
+              }
+
+              @if (esDisco(comp.dispositivoId)) {
+                <div class="form-2col">
+                  <p-floatlabel variant="on">
+                    <p-select [options]="discoOptions" optionLabel="label" optionValue="value" [(ngModel)]="comp.discoTipo" class="w-full" />
+                    <label>Tipo Disco</label>
+                  </p-floatlabel>
+                  <p-floatlabel variant="on">
+                    <p-select [options]="discoCapacidadOptions" optionLabel="label" optionValue="value" [(ngModel)]="comp.discoEspacio" class="w-full" />
+                    <label>Capacidad (GB)</label>
+                  </p-floatlabel>
+                </div>
+              }
+
+              @if (esProcesador(comp.dispositivoId)) {
+                <p-floatlabel variant="on">
+                  <p-select [options]="procesadorOptions" optionLabel="label" optionValue="value" [(ngModel)]="comp.procesador" class="w-full" />
+                  <label>Nombre / Modelo</label>
+                </p-floatlabel>
+              }
+            </div>
+          }
+
+          @if (armadaComponentes.length === 0) {
+            <p class="comp-empty">Sin componentes — usa "Agregar" para añadir RAM, Procesador, Disco, etc.</p>
+          }
+        </div>
+      }
+    }
+
+    @if (selectedEsRam) {
+      <div class="form-2col">
+        <p-floatlabel variant="on">
+          <p-select
+            [options]="ramOptions"
+            optionLabel="label"
+            optionValue="value"
+            [(ngModel)]="ramTipo"
+            class="w-full"
+          />
+          <label>RAM tipo</label>
+        </p-floatlabel>
+
+        <p-floatlabel variant="on">
+          <p-select [options]="ramCapacidadOptions" optionLabel="label" optionValue="value" [(ngModel)]="ramEspacio" class="w-full" />
+          <label>Capacidad (GB)</label>
+        </p-floatlabel>
+      </div>
+    }
+
+    @if (selectedEsProcesador) {
+      <p-floatlabel variant="on">
+        <p-select [options]="procesadorOptions" optionLabel="label" optionValue="value" [(ngModel)]="procesador" class="w-full" />
+        <label>Nombre / Modelo</label>
+      </p-floatlabel>
+    }
+
+    @if (selectedEsDisco) {
+      <div class="form-2col">
+        <p-floatlabel variant="on">
+          <p-select
+            [options]="discoOptions"
+            optionLabel="label"
+            optionValue="value"
+            [(ngModel)]="discoTipo"
+            class="w-full"
+          />
+          <label>Disco tipo</label>
+        </p-floatlabel>
+
+        <p-floatlabel variant="on">
+          <p-select [options]="discoCapacidadOptions" optionLabel="label" optionValue="value" [(ngModel)]="discoEspacio" class="w-full" />
+          <label>Capacidad (GB)</label>
+        </p-floatlabel>
+      </div>
+    }
+
+    @if (selectedEsMonitor) {
+      <p-floatlabel variant="on">
+        <p-inputnumber [(ngModel)]="pulgadas" class="w-full" [min]="0" />
+        <label>Pulgadas</label>
+      </p-floatlabel>
+    }
+
+    <p-floatlabel variant="on">
+      <p-select
+        [options]="estaciones()"
+        optionLabel="nombre"
+        optionValue="id"
+        [(ngModel)]="estacionId"
+        [showClear]="true"
+        class="w-full"
+        placeholder=""
+      />
+      <label>Estación (opcional)</label>
+    </p-floatlabel>
+
+    <div class="form-actions">
+      <p-button severity="secondary" [outlined]="true" (onClick)="drawerVisible = false"><app-icon name="close" size="0.9rem" />Cancelar</p-button>
+      <p-button severity="primary" (onClick)="guardar()"><app-icon name="save" size="0.9rem" />Guardar</p-button>
+    </div>
+  </div>
+</p-drawer>

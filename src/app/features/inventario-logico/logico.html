@@ -1,0 +1,233 @@
+<p-toast position="top-right" />
+<p-confirm-dialog />
+
+<header class="page-header">
+  <h1>Inventario Lógico</h1>
+  <p-button severity="primary" (onClick)="abrirNueva()">
+    <svg data-p-icon="plus" style="width: 1rem; height: 1rem"></svg>
+    <span>Nuevo</span>
+  </p-button>
+</header>
+
+<section class="page-content">
+  <div class="toolbar-row">
+    <p-select
+      [options]="ubicacionesDeEstaciones"
+      optionLabel="nombre"
+      optionValue="id"
+      [(ngModel)]="filtroUbicacionId"
+      placeholder="Ubicación"
+      [showClear]="true"
+      (onChange)="aplicarFiltros()"
+      style="min-width: 9rem"
+    />
+    <p-select
+      [options]="estaciones()"
+      optionLabel="nombre"
+      optionValue="id"
+      [(ngModel)]="filtroEstacion"
+      placeholder="Estación"
+      [showClear]="true"
+      (onChange)="aplicarFiltros()"
+      style="min-width: 9rem"
+    />
+    <p-select
+      [options]="tipoAccesoOptions"
+      optionLabel="label"
+      optionValue="value"
+      [(ngModel)]="filtroTipoAcceso"
+      placeholder="Tipo de acceso"
+      [showClear]="true"
+      (onChange)="aplicarFiltros()"
+      style="min-width: 9rem"
+    />
+    @if (!loading()) {
+      <span class="item-count">{{ items().length }} {{ items().length === 1 ? 'item' : 'items' }}</span>
+    }
+  </div>
+
+  @if (loading()) {
+    <div class="list-grid">
+      @for (i of [1, 2, 3, 4]; track i) {
+        <p-skeleton height="7rem" borderRadius="0.75rem" />
+      }
+    </div>
+  } @else if (items().length === 0) {
+    <div class="empty-state">
+      <svg data-p-icon="key" style="width: 3rem; height: 3rem"></svg>
+      <p>No hay accesos</p>
+    </div>
+  } @else {
+    <div class="list-grid">
+      @for (item of items(); track item.id) {
+        <div class="card" [class]="'card access-' + accessVisualType(item)">
+          <div class="card-top">
+            <div class="access-heading">
+              <div class="access-icon" aria-hidden="true">
+                <app-icon [name]="accessVisualType(item)" size="24px" />
+              </div>
+              <span class="card-title">{{ item.tipoAcceso | tipoAcceso }}</span>
+            </div>
+            <p-tag [value]="item.identificador" severity="secondary" />
+          </div>
+
+          @if (visibles().has(item.id)) {
+            <div class="secret">
+              <span class="secret-label">Contraseña</span>
+              <code class="secret-value">{{ contrasenas().get(item.id) }}</code>
+            </div>
+          }
+
+          <div class="card-footer">
+            @if (item.estacionId) {
+              <p-tag [value]="estacionNombre(item.estacionId)" severity="info" />
+            } @else {
+              <span class="muted-sm">Sin asignar</span>
+            }
+            <div class="card-actions">
+              <p-button [text]="true" [rounded]="true" [iconOnly]="true" severity="secondary" (onClick)="toggleContrasena(item)">
+                @if (visibles().has(item.id)) {
+                  <svg data-p-icon="eye-slash" style="width: 1rem; height: 1rem"></svg>
+                } @else {
+                  <svg data-p-icon="eye" style="width: 1rem; height: 1rem"></svg>
+                }
+              </p-button>
+              @if (!item.estacionId) {
+                <p-button [text]="true" [rounded]="true" [iconOnly]="true" severity="secondary" (onClick)="abrirAsignarEstacion(item)" pTooltip="Asignar a estación" tooltipPosition="top">
+                  <svg data-p-icon="link" style="width: 1rem; height: 1rem"></svg>
+                </p-button>
+              }
+              @if (item.estacionId) {
+                <p-button [text]="true" [rounded]="true" [iconOnly]="true" severity="danger" (onClick)="desasignar(item)" pTooltip="Liberar" tooltipPosition="top">
+                  <svg data-p-icon="times-circle" style="width: 1rem; height: 1rem"></svg>
+                </p-button>
+              }
+              <p-button [text]="true" [rounded]="true" [iconOnly]="true" severity="secondary" (onClick)="abrirEditar(item)">
+                <svg data-p-icon="pencil" style="width: 1rem; height: 1rem"></svg>
+              </p-button>
+              <p-button [text]="true" [rounded]="true" [iconOnly]="true" severity="danger" (onClick)="eliminar(item)">
+                <svg data-p-icon="trash" style="width: 1rem; height: 1rem"></svg>
+              </p-button>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</section>
+
+<p-drawer
+  [(visible)]="asignarDrawerVisible"
+  header="Asignar a estación"
+  position="bottom"
+  styleClass="form-drawer"
+  [showCloseIcon]="true"
+>
+  <div class="form-grid">
+    <p-floatlabel variant="on">
+      <p-select
+        [options]="estaciones()"
+        optionLabel="nombre"
+        optionValue="id"
+        [(ngModel)]="estacionAsignarId"
+        class="w-full"
+        placeholder="—"
+      />
+      <label>Estación *</label>
+    </p-floatlabel>
+    <div class="form-actions">
+      <p-button severity="secondary" [outlined]="true" (onClick)="asignarDrawerVisible = false"><app-icon name="close" size="0.9rem" />Cancelar</p-button>
+      <p-button severity="primary" (onClick)="confirmarAsignarEstacion()"><app-icon name="link" size="0.9rem" />Asignar</p-button>
+    </div>
+  </div>
+</p-drawer>
+
+<p-drawer
+  [(visible)]="drawerVisible"
+  [header]="editandoId ? 'Editar acceso' : 'Nuevo acceso'"
+  position="bottom"
+  styleClass="form-drawer"
+  [showCloseIcon]="true"
+>
+  <div class="form-grid">
+    @if (isAdmin) {
+      <p-floatlabel variant="on">
+        <p-select
+          [options]="empresaOptions"
+          optionLabel="label"
+          optionValue="value"
+          [(ngModel)]="empresaForm"
+          class="w-full"
+        />
+        <label>Empresa *</label>
+      </p-floatlabel>
+    }
+
+    <p-floatlabel variant="on">
+      <p-select
+        [options]="tipoAccesoOptions"
+        optionLabel="label"
+        optionValue="value"
+        [(ngModel)]="tipoAcceso"
+        class="w-full"
+      />
+      <label>Tipo de acceso *</label>
+    </p-floatlabel>
+
+    <p-floatlabel variant="on">
+      <input
+        pInputText
+        [(ngModel)]="identificador"
+        name="logico-identificador"
+        autocomplete="off"
+        class="w-full"
+      />
+      <label>Identificador *</label>
+    </p-floatlabel>
+
+    <p-floatlabel variant="on" class="password-float">
+      <input
+        pInputText
+        [type]="soportaTextSecurity ? 'text' : (mostrarContrasena ? 'text' : 'password')"
+        [class.masked]="soportaTextSecurity && !mostrarContrasena"
+        [(ngModel)]="contrasena"
+        name="logico-contrasena"
+        autocomplete="off"
+        data-form-type="other"
+        class="w-full"
+      />
+      <label>Contraseña ({{ editandoId ? 'opcional al editar' : 'opcional' }})</label>
+      <button
+        type="button"
+        class="pwd-toggle"
+        (click)="mostrarContrasena = !mostrarContrasena"
+        [attr.aria-label]="mostrarContrasena ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+        [attr.aria-pressed]="mostrarContrasena"
+      >
+        @if (mostrarContrasena) {
+          <svg data-p-icon="eye-slash" style="width: 1rem; height: 1rem"></svg>
+        } @else {
+          <svg data-p-icon="eye" style="width: 1rem; height: 1rem"></svg>
+        }
+      </button>
+    </p-floatlabel>
+
+    <p-floatlabel variant="on">
+      <p-select
+        [options]="estaciones()"
+        optionLabel="nombre"
+        optionValue="id"
+        [(ngModel)]="estacionId"
+        [showClear]="true"
+        class="w-full"
+        placeholder=""
+      />
+      <label>Estación (opcional)</label>
+    </p-floatlabel>
+
+    <div class="form-actions">
+      <p-button severity="secondary" [outlined]="true" (onClick)="drawerVisible = false"><app-icon name="close" size="0.9rem" />Cancelar</p-button>
+      <p-button severity="primary" (onClick)="guardar()"><app-icon name="save" size="0.9rem" />Guardar</p-button>
+    </div>
+  </div>
+</p-drawer>

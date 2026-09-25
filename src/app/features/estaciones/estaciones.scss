@@ -1,0 +1,107 @@
+.station-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: var(--p-surface-0);
+  border: 1px solid var(--p-surface-200);
+  border-radius: 0.75rem;
+  text-decoration: none;
+  color: var(--p-text-color);
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+
+.station-card:active {
+  transform: scale(0.985);
+}
+
+.station-card:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.station-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.station-name {
+  font-weight: 600;
+  font-size: 1rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.station-card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.station-id {
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+}
+
+.station-actions {
+  display: flex;
+  gap: 0.125rem;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.field-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--p-text-muted-color);
+  padding-left: 0.25rem;
+}
+
+.form-drawer {
+  height: 85dvh;       // altura fija que ocupa el drawer
+  max-height: 90dvh;   // tope de seguridad
+  border-top-left-radius: 1rem;
+  border-top-right-radius: 1rem;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.inactive-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--p-surface-300);
+}
+
+.inactive-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--p-text-muted-color);
+}
+
+.station-card.inactive {
+  opacity: 0.6;
+}
+
+.muted-sm {
+  font-size: 0.8rem;
+  color: var(--p-text-muted-color);
+}

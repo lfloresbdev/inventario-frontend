@@ -1,1 +1,487 @@
-/* You can add global styles to this file, and also import other style files */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@700;800&display=swap');
+
+:root {
+  --neo-bg: #eef0f5;
+  --neo-surface: #f4f5f9;
+  --neo-shadow: 5px 5px 14px rgba(0, 0, 0, 0.12), -3px -3px 8px rgba(255, 255, 255, 0.9);
+  --neo-inset: inset 3px 3px 8px rgba(0, 0, 0, 0.12), inset -2px -2px 5px rgba(255, 255, 255, 0.9);
+  --neo-radius: 14px;
+  --neo-indigo: #6366f1;
+  --neo-text: #263044;
+  --neo-muted: #778198;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--neo-bg);
+  color: var(--neo-text);
+  font-family:
+    'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100%;
+}
+
+body {
+  min-height: 100dvh;
+}
+
+/* Iconos dentro de botones */
+.p-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 0 !important;
+  border-radius: var(--neo-radius) !important;
+  background: var(--neo-surface) !important;
+  color: var(--neo-indigo) !important;
+  box-shadow: var(--neo-shadow) !important;
+  transition: box-shadow 0.2s ease, transform 0.2s ease, color 0.2s ease;
+}
+
+.p-button:hover {
+  box-shadow: 7px 7px 17px rgba(0, 0, 0, 0.13), -4px -4px 10px rgba(255, 255, 255, 0.95) !important;
+  transform: translateY(-1px);
+}
+
+.p-button:active,
+.p-button.p-button-text:active {
+  box-shadow: var(--neo-inset) !important;
+  transform: translateY(0);
+}
+
+.p-button.p-button-outlined {
+  color: var(--neo-indigo) !important;
+  border: 0 !important;
+}
+
+.p-button.p-button-danger {
+  color: #ef4444 !important;
+}
+
+.p-button.p-button-secondary {
+  color: var(--neo-muted) !important;
+}
+
+/* Deshabilitado: aplanar el relieve en vez de desvanecer el botón entero.
+   El opacity .4 por defecto de Aura lo volvía ilegible sobre la superficie
+   neumórfica — se notaba sobre todo en "Guardar", que nace deshabilitado
+   con el formulario vacío. */
+.p-button:disabled,
+.p-button.p-disabled {
+  opacity: 1 !important;
+  color: var(--neo-muted) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.p-button svg {
+  flex-shrink: 0;
+}
+
+.p-button-icon-only {
+  gap: 0;
+}
+
+.p-select,
+.p-inputtext,
+.p-inputnumber,
+.p-textarea,
+textarea[pTextarea] {
+  border: 0 !important;
+  border-radius: var(--neo-radius) !important;
+  background: var(--neo-surface) !important;
+  color: var(--neo-text) !important;
+  box-shadow: var(--neo-inset) !important;
+}
+
+.p-select:focus,
+.p-inputtext:focus,
+.p-inputnumber:focus-within,
+.p-textarea:focus,
+textarea[pTextarea]:focus {
+  box-shadow: inset 3px 3px 8px rgba(0, 0, 0, 0.12), inset -2px -2px 5px rgba(255, 255, 255, 0.9), 0 0 0 3px rgba(99, 102, 241, 0.14) !important;
+}
+
+.p-select-overlay,
+.p-select-panel,
+.p-dialog,
+.p-confirmdialog {
+  border: 0 !important;
+  border-radius: 20px !important;
+  background: var(--neo-surface) !important;
+  box-shadow: var(--neo-shadow) !important;
+}
+
+/* El drawer hace de lienzo, no de superficie elevada: usa el fondo de página.
+   Si usara --neo-surface quedaría del mismo color que los botones y los
+   inputs que contiene, y el relieve neumórfico se volvería invisible. */
+.p-drawer {
+  border: 0 !important;
+  border-radius: 20px !important;
+  background: var(--neo-bg) !important;
+  box-shadow: var(--neo-shadow) !important;
+}
+
+/* Utilidad global: estaba declarada sólo dentro de 3 SCSS de componente,
+   así que no llegaba a login ni a los selects de admin/detalle. */
+.w-full {
+  width: 100%;
+}
+
+/* ---- Acentos por tipo de item ----
+   Globales porque los consumen Físico, Lógico y el detalle de estación.
+   Dispositivos agrupados por familia: pantallas=cyan · internos=emerald ·
+   portátiles=blue · punteros=indigo · cables=orange */
+.device-monitor { --device-accent: #0ea5e9; }
+.device-tv { --device-accent: #0284c7; }
+.device-projector { --device-accent: #0891b2; }
+/* El gabinete toma el tono más profundo de la familia de sus componentes */
+.device-cpu { --device-accent: #065f46; }
+.device-processor { --device-accent: #10b981; }
+.device-ram { --device-accent: #14b8a6; }
+.device-disk { --device-accent: #059669; }
+.device-laptop { --device-accent: #3b82f6; }
+.device-phone { --device-accent: #a855f7; }
+.device-mouse { --device-accent: #6366f1; }
+.device-headphones { --device-accent: #8b5cf6; }
+.device-keyboard { --device-accent: #f59e0b; }
+.device-charger { --device-accent: #eab308; }
+.device-cable { --device-accent: #f97316; }
+.device-power { --device-accent: #ea580c; }
+.device-camera { --device-accent: #ec4899; }
+.device-cooler { --device-accent: #06b6d4; }
+.device-fridge { --device-accent: #38bdf8; }
+.device-microwave { --device-accent: #f43f5e; }
+.device-generic { --device-accent: #64748b; }
+
+/* Accesos: marcas con su color oficial, sistemas internos con la paleta de la app */
+.access-discord { --access-accent: #5865f2; }
+.access-google { --access-accent: #4285f4; }
+.access-whatsapp { --access-accent: #25d366; }
+.access-usuarior { --access-accent: #8b5cf6; }
+.access-winforce { --access-accent: #0ea5e9; }
+.access-sicacenter { --access-accent: #f59e0b; }
+.access-issabel { --access-accent: #10b981; }
+.access-albru { --access-accent: #6366f1; }
+
+/* Forma neumórfica común. El color lo define la severidad más abajo:
+   por eso background y color NO llevan !important. */
+.p-tag {
+  border: 0 !important;
+  border-radius: 999px !important;
+  box-shadow: var(--neo-inset) !important;
+  background: var(--neo-surface);
+  color: var(--neo-muted);
+}
+
+/* Severidades tintadas sobre la superficie neo: conservan el relieve
+   sin perder la lectura semántica del estado. */
+.p-tag.p-tag-info {
+  background: color-mix(in srgb, #0ea5e9 16%, var(--neo-surface));
+  color: #0369a1;
+}
+
+.p-tag.p-tag-success {
+  background: color-mix(in srgb, #10b981 16%, var(--neo-surface));
+  color: #047857;
+}
+
+.p-tag.p-tag-warn {
+  background: color-mix(in srgb, #f59e0b 22%, var(--neo-surface));
+  color: #b45309;
+}
+
+.p-tag.p-tag-danger {
+  background: color-mix(in srgb, #ef4444 16%, var(--neo-surface));
+  color: #b91c1c;
+}
+
+.p-tag.p-tag-secondary {
+  background: var(--neo-surface);
+  color: var(--neo-muted);
+}
+
+.p-skeleton {
+  border: 0 !important;
+  background: var(--neo-surface) !important;
+  box-shadow: var(--neo-inset) !important;
+}
+
+/* ---- Labels de formularios (acento indigo, igual que los botones) ---- */
+.p-floatlabel label,
+.p-floatlabel-on label,
+.p-floatlabel-over label,
+.p-floatlabel-in label {
+  color: var(--neo-indigo) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.field-label {
+  color: var(--neo-indigo);
+}
+
+/* ---- Tabs de Administración (acento indigo) ---- */
+.admin-tabs .p-tab,
+.admin-tabs .p-tab.p-tab-active,
+.admin-tabs .tab-label {
+  color: var(--neo-indigo) !important;
+}
+
+.admin-tabs .p-tablist-active-bar {
+  background: var(--neo-indigo) !important;
+}
+
+/* ---- Drawer tipo bottom sheet (mobile-first) ---- */
+.p-drawer.p-drawer-bottom.form-drawer {
+  height: 90dvh;
+  max-height: 90dvh;
+  border-top-left-radius: 1.25rem;
+  border-top-right-radius: 1.25rem;
+  padding: 0;
+}
+
+/* En móvil la nav inferior queda visible; el drawer termina justo encima de ella.
+   Hay que mover el borde INFERIOR con `bottom`: el drawer está fijado a
+   bottom:0, así que reducir sólo `height` recorta por arriba y el final del
+   formulario (Cancelar / Guardar) queda debajo de la barra. */
+@media (max-width: 767px) {
+  .p-drawer.p-drawer-bottom.form-drawer {
+    bottom: calc(4.5rem + env(safe-area-inset-bottom));
+    height: calc(100dvh - 8rem - env(safe-area-inset-bottom));
+    max-height: calc(100dvh - 8rem - env(safe-area-inset-bottom));
+  }
+}
+
+.form-drawer .p-drawer-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1rem 1.5rem;
+}
+
+.form-drawer .p-drawer-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--p-surface-200);
+}
+
+.form-drawer .p-drawer-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+/* ---- Layout contenedores mobile-first ---- */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--p-surface-0);
+  border-bottom: 1px solid var(--p-surface-200);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.page-content {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.list-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+.toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.item-count {
+  margin-left: auto;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--p-text-muted-color);
+  white-space: nowrap;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--p-text-muted-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.empty-state svg {
+  fill: var(--p-surface-300);
+}
+
+/* Formularios */
+.form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.form-grid .field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.field-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--p-text-muted-color);
+  padding-left: 0.125rem;
+}
+
+.form-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.form-actions p-button {
+  flex: 1;
+}
+
+/* Detalles */
+.detail-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px dashed var(--p-surface-200);
+  font-size: 0.9rem;
+}
+
+.detail-row .k {
+  color: var(--p-text-muted-color);
+}
+
+.detail-row .v {
+  font-weight: 500;
+  text-align: right;
+  word-break: break-word;
+}
+
+@media (min-width: 600px) {
+  .list-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 992px) {
+  .page-content {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .list-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Minimal Neo Light surfaces */
+.page-header {
+  background: var(--neo-bg);
+  border: 0;
+  box-shadow: none;
+}
+
+.page-header h1,
+.p-drawer-title,
+.comp-form-num {
+  font-family: 'Space Grotesk', Inter, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.page-header .p-button {
+  border: 1px solid rgba(99, 102, 241, 0.28) !important;
+  color: var(--neo-indigo) !important;
+}
+
+.page-content {
+  background: var(--neo-bg);
+}
+
+.toolbar-row {
+  padding: 0.3rem;
+  border-radius: 16px;
+}
+
+.toolbar-row > p-select {
+  border-radius: var(--neo-radius);
+  box-shadow: var(--neo-inset);
+}
+
+.empty-state {
+  border-radius: 20px;
+  background: var(--neo-surface);
+  box-shadow: var(--neo-shadow);
+}
+
+.detail-card,
+.detail-row,
+.item,
+.admin-row,
+.station-card {
+  border: 0 !important;
+  background: var(--neo-surface) !important;
+  box-shadow: var(--neo-shadow);
+}
+
+.detail-card {
+  border-radius: 20px;
+  padding: 1.1rem;
+}
+
+.detail-row {
+  border-bottom: 0;
+  box-shadow: none;
+}
+
+.page-content .p-tabs,
+.page-content .p-tabpanels,
+.page-content .p-tablist {
+  background: transparent;
+  border: 0;
+}
+
+.form-drawer .p-drawer-header {
+  border-bottom: 0 !important;
+}

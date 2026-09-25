@@ -1,0 +1,266 @@
+.admin-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-top: 1rem;
+}
+
+.tab-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--neo-indigo, #6366f1);
+}
+
+.admin-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.admin-count {
+  font-size: 0.85rem;
+  color: var(--p-text-muted-color);
+}
+
+.admin-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.admin-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--p-border-radius-md, 6px);
+  border: 1px solid var(--p-content-border-color);
+  background: var(--p-content-background);
+  transition: background 0.15s;
+
+  &:hover {
+    background: var(--p-content-hover-background);
+  }
+
+  &.inactive {
+    opacity: 0.55;
+  }
+}
+
+.admin-row-name {
+  flex: 1;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.admin-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.admin-row-sub {
+  font-size: 0.8rem;
+  color: var(--p-text-muted-color);
+}
+
+.admin-row-actions {
+  display: flex;
+  gap: 0.125rem;
+  margin-left: auto;
+}
+
+.admin-empty {
+  text-align: center;
+  color: var(--p-text-muted-color);
+  padding: 2rem 0;
+  font-size: 0.9rem;
+}
+
+::ng-deep .admin-drawer {
+  width: 22rem !important;
+
+  .p-drawer-content {
+    padding: 1.25rem;
+  }
+}
+
+.drawer-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-top: 0.5rem;
+
+  p-floatlabel,
+  p-select {
+    width: 100%;
+  }
+
+  input[pInputText] {
+    width: 100%;
+  }
+}
+
+.drawer-footer {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--p-content-border-color);
+  margin-top: auto;
+}
+
+.admin-marcas-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border: 1px dashed var(--p-content-border-color);
+  border-radius: 6px;
+  padding: 0.75rem;
+  background: var(--p-surface-50, rgba(0,0,0,.02));
+}
+
+.admin-marcas-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.admin-marcas-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--p-text-muted-color);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.admin-marcas-add {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.admin-row-sm {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.82rem;
+}
+
+.disp-componente-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+
+  label {
+    font-size: 0.85rem;
+    cursor: pointer;
+    color: var(--p-text-color);
+  }
+}
+
+/* Card de dispositivo con sublista de marcas */
+.admin-row-card {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.admin-row-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+/* Acordeón de dispositivos (Minimal Neo) */
+.device-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+::ng-deep .device-accordion .p-accordionpanel {
+  border: 0;
+  border-radius: var(--neo-radius, 14px);
+  background: var(--neo-surface, #f4f5f9);
+  box-shadow: var(--neo-shadow, 5px 5px 14px rgba(0, 0, 0, 0.12), -3px -3px 8px rgba(255, 255, 255, 0.9));
+  overflow: hidden;
+}
+
+::ng-deep .device-accordion .p-accordionheader {
+  border: 0;
+  background: transparent;
+  padding: 0.7rem 0.9rem;
+}
+
+::ng-deep .device-accordion .p-accordionheader .admin-row-name {
+  font-family: 'Space Grotesk', Inter, sans-serif;
+}
+
+::ng-deep .device-accordion .p-accordioncontent-content {
+  padding: 0 0.9rem 0.8rem 0.9rem;
+  background: transparent;
+}
+
+.marca-sublist {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  border-left: 2px solid var(--p-surface-200, #e5e7eb);
+}
+
+.marca-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.4rem;
+  font-size: 0.85rem;
+
+  input {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.marca-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.marca-actions {
+  display: flex;
+  gap: 0.05rem;
+}
+
+.marca-add-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding-left: 0.75rem;
+
+  input {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.marca-empty {
+  margin: 0;
+  padding-left: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--p-text-muted-color);
+}

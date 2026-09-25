@@ -1,0 +1,133 @@
+<p-toast position="top-right" />
+<p-confirm-dialog />
+
+<header class="page-header">
+  <a routerLink="/estaciones" class="back">
+    <svg data-p-icon="arrow-left" style="width: 1.25rem; height: 1.25rem"></svg>
+  </a>
+  <h1>{{ nombre() || 'Estación' }}</h1>
+  <span class="spacer"></span>
+</header>
+
+<section class="page-content">
+  @if (loading()) {
+    <p-skeleton height="9rem" borderRadius="0.75rem" />
+  } @else if (estacion(); as est) {
+    <div class="detail-card">
+      <div class="detail-row"><span class="k">Nombre</span><span class="v">{{ est.nombre }}</span></div>
+      <div class="detail-row"><span class="k">Local</span><span class="v"><p-tag [value]="est.local?.nombre" severity="info" /></span></div>
+      <div class="detail-row"><span class="k">Ubicación</span><span class="v">{{ est.ubicacionFisica?.nombre }}</span></div>
+      <div class="detail-row"><span class="k">Número</span><span class="v">{{ est.numero }}</span></div>
+      <div class="detail-row"><span class="k">Creada</span><span class="v">{{ est.creadoEn | date:'dd/MM/yyyy HH:mm' }}</span></div>
+    </div>
+
+    <p-tabs [(value)]="tabIndex">
+      <p-tablist>
+        <p-tab value="0">
+          <span class="tab-label">
+            <app-icon name="monitor" size="1rem" />
+            Físico ({{ fisicos().length }})
+          </span>
+        </p-tab>
+        <p-tab value="1">
+          <span class="tab-label">
+            <app-icon name="key" size="1rem" />
+            Lógico ({{ logicos().length }})
+          </span>
+        </p-tab>
+      </p-tablist>
+      <p-tabpanels>
+        <p-tabpanel value="0">
+          @if (fisicos().length === 0) {
+            <p class="muted">Sin inventario físico</p>
+          } @else {
+            <div class="item-list">
+              @for (f of fisicos(); track f.id) {
+                <div class="item">
+                  <div class="item-main">
+                    <span class="item-title" [class]="'item-title device-' + deviceIcon(f)">
+                      <app-icon [name]="deviceIcon(f)" size="1rem" />
+                      {{ f.dispositivo?.nombre }}
+                    </span>
+                    <div class="item-main-end">
+                      <p-tag [value]="f.marca?.nombre" severity="secondary" />
+                      <p-button [text]="true" [rounded]="true" [iconOnly]="true" severity="danger" pTooltip="Liberar" tooltipPosition="left" (onClick)="liberarFisico(f)">
+                        <svg data-p-icon="minus-circle" style="width: 1rem; height: 1rem"></svg>
+                      </p-button>
+                    </div>
+                  </div>
+                  <div class="item-meta">
+                    @if (f.modelo) { <span>{{ f.modelo }}</span> }
+                    @if (f.serie) { <span>{{ f.serie }}</span> }
+                    @if (f.procesador) { <span>{{ f.procesador }}</span> }
+                    @if (f.ramTipo) { <span>{{ f.ramTipo | ramTipo }} {{ f.ramEspacio }}GB</span> }
+                    @if (f.discoTipo) { <span>{{ f.discoTipo | discoTipo }} {{ f.discoEspacio }}GB</span> }
+                    @if (f.pulgadas) { <span>{{ f.pulgadas }}"</span> }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+          <div style="margin-top: 1rem">
+            <p-button severity="secondary" [outlined]="true" size="small" (onClick)="abrirAgregarItem()">
+              <svg data-p-icon="plus" style="width: 0.85rem; height: 0.85rem"></svg>
+              Agregar item
+            </p-button>
+          </div>
+        </p-tabpanel>
+        <p-tabpanel value="1">
+          @if (logicos().length === 0) {
+            <p class="muted">Sin inventario lógico</p>
+          } @else {
+            <div class="item-list">
+              @for (l of logicos(); track l.id) {
+                <div class="item">
+                  <div class="item-main">
+                    <span class="item-title" [class]="'item-title access-' + accessIcon(l)">
+                      <app-icon [name]="accessIcon(l)" size="1rem" />
+                      {{ l.tipoAcceso | tipoAcceso }}
+                    </span>
+                    <p-button [text]="true" [rounded]="true" [iconOnly]="true" severity="danger" pTooltip="Liberar" tooltipPosition="left" (onClick)="liberarLogico(l)">
+                      <svg data-p-icon="minus-circle" style="width: 1rem; height: 1rem"></svg>
+                    </p-button>
+                  </div>
+                  <div class="item-meta">
+                    <span>{{ l.identificador }}</span>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </p-tabpanel>
+      </p-tabpanels>
+    </p-tabs>
+  }
+</section>
+
+<p-drawer
+  [(visible)]="agregarItemVisible"
+  header="Agregar item a la estación"
+  position="bottom"
+  styleClass="form-drawer"
+  [showCloseIcon]="true"
+>
+  <div class="form-grid">
+    <p-floatlabel variant="on">
+      <p-select
+        [options]="itemsLibresOpciones()"
+        optionLabel="label"
+        optionValue="id"
+        [(ngModel)]="itemAsignarId"
+        class="w-full"
+        placeholder="—"
+        [filter]="true"
+        filterBy="label"
+      />
+      <label>Item libre *</label>
+    </p-floatlabel>
+    <div class="form-actions">
+      <p-button severity="secondary" [outlined]="true" (onClick)="agregarItemVisible = false"><app-icon name="close" size="0.9rem" />Cancelar</p-button>
+      <p-button severity="primary" (onClick)="confirmarAgregarItem()">Agregar</p-button>
+    </div>
+  </div>
+</p-drawer>

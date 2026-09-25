@@ -1,0 +1,425 @@
+.w-full {
+  width: 100%;
+}
+
+.card {
+  padding: 1rem;
+  background: var(--p-surface-0);
+  border: 1px solid var(--p-surface-200);
+  border-radius: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.card-title {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+  color: var(--p-text-muted-color);
+}
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.card-actions {
+  display: flex;
+  gap: 0.125rem;
+}
+
+.muted-sm {
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+}
+
+.card-clickable {
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+    border-color: var(--p-primary-300);
+  }
+}
+
+.detalle-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.detalle-marca {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.detalle-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.detalle-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--p-surface-200);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.componentes-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border-top: 1px solid var(--p-surface-200);
+  padding-top: 1rem;
+}
+
+.componentes-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.componentes-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.comp-add-btn {
+  align-self: flex-start;
+  margin-top: 0.25rem;
+}
+
+.comp-empty {
+  font-size: 0.8rem;
+  color: var(--p-text-muted-color);
+  text-align: center;
+  padding: 0.5rem 0;
+}
+
+.comp-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--p-surface-50);
+  border: 1px solid var(--p-surface-200);
+  border-radius: 0.5rem;
+}
+
+.comp-item {
+  border: 0;
+  border-radius: 14px;
+  background: var(--neo-surface);
+  box-shadow: var(--neo-shadow);
+}
+
+.comp-clickable {
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    box-shadow: var(--neo-inset);
+    transform: translateY(0);
+  }
+}
+
+.detalle-field {
+  border-bottom: 0;
+  padding: 0.55rem 0.75rem;
+  border-radius: 12px;
+  background: var(--neo-surface);
+  box-shadow: var(--neo-inset);
+}
+
+.comp-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.comp-nombre {
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.comp-desc {
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+}
+
+.detalle-label {
+  font-size: 0.8rem;
+  color: var(--p-text-muted-color);
+  white-space: nowrap;
+}
+
+.detalle-value {
+  font-weight: 500;
+  text-align: right;
+}
+
+.form-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.form-drawer {
+  max-height: 85dvh;
+  border-top-left-radius: 1rem;
+  border-top-right-radius: 1rem;
+}
+
+@media (max-width: 480px) {
+  .form-2col {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+.cpu-modo-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.cpu-modo-label {
+  font-size: 0.78rem;
+  color: var(--p-text-muted-color);
+  font-weight: 500;
+}
+
+.cpu-modo-btns {
+  display: flex;
+  border: 1px solid var(--p-content-border-color);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.cpu-modo-btn {
+  flex: 1;
+  padding: 0.45rem 0.75rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--p-text-color);
+  transition: background 0.15s, color 0.15s;
+
+  &:not(:last-child) {
+    border-right: 1px solid var(--p-content-border-color);
+  }
+
+  &.active {
+    background: var(--p-primary-color);
+    color: var(--p-primary-contrast-color, #fff);
+    font-weight: 600;
+  }
+}
+
+.componentes-crear-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px dashed var(--p-content-border-color);
+  border-radius: 8px;
+  background: var(--p-surface-50, rgba(0,0,0,0.02));
+}
+
+.componentes-crear-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.componentes-crear-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--p-text-muted-color);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.comp-form-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: var(--p-surface-0);
+  border: 1px solid var(--p-surface-200);
+  border-radius: 6px;
+}
+
+.comp-form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.comp-form-num {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--p-text-muted-color);
+}
+
+/* Hardware cards: Minimal Neo Light */
+.device-card {
+  --device-accent: #6366f1;
+  position: relative;
+  min-height: 10rem;
+  border: 0 !important;
+  border-radius: 20px !important;
+  background: var(--neo-surface) !important;
+  box-shadow: var(--neo-shadow) !important;
+  padding: 1rem;
+  overflow: hidden;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.device-card:hover,
+.device-card:focus-within {
+  transform: translateY(-2px);
+  box-shadow: 8px 8px 18px rgba(0, 0, 0, 0.14), -4px -4px 10px rgba(255, 255, 255, 0.95) !important;
+}
+
+.device-card:active {
+  transform: translateY(0);
+  box-shadow: var(--neo-inset) !important;
+}
+
+/* Los acentos .device-* viven en styles.scss (globales: los usan
+   también estacion-detalle y cualquier vista que liste dispositivos) */
+
+.device-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.device-icon {
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: var(--device-accent);
+  background: var(--neo-surface);
+  box-shadow: var(--neo-shadow);
+  transition: box-shadow 0.2s ease, color 0.2s ease;
+}
+
+.device-card:hover .device-icon,
+.device-card:focus-within .device-icon,
+.device-card:active .device-icon {
+  box-shadow: var(--neo-inset);
+}
+
+/* El trazo del icono lo define IconComponent; aquí sólo el color, que hereda */
+
+.card-title {
+  display: block;
+  color: var(--device-accent);
+  font-family: 'Space Grotesk', Inter, sans-serif;
+  font-size: 1.02rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+.device-subtitle {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--neo-muted);
+  font-size: 0.74rem;
+  font-weight: 500;
+}
+
+.brand-badge {
+  flex: 0 0 auto;
+  padding: 0.34rem 0.62rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--device-accent) 14%, transparent);
+  color: var(--device-accent);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.device-card .card-actions .p-button {
+  color: var(--device-accent) !important;
+  box-shadow: 3px 3px 8px color-mix(in srgb, var(--device-accent) 22%, transparent), -2px -2px 5px rgba(255, 255, 255, 0.9) !important;
+}
+
+.device-card .card-actions .p-button:active {
+  box-shadow: inset 3px 3px 8px color-mix(in srgb, var(--device-accent) 25%, transparent), inset -2px -2px 5px rgba(255, 255, 255, 0.9) !important;
+}
+
+.detail-card {
+  border: 0 !important;
+  border-radius: 20px !important;
+  background: var(--neo-surface) !important;
+  box-shadow: var(--neo-shadow) !important;
+}
+
+.componentes-section,
+.componentes-crear-section,
+.comp-form-item {
+  border: 0;
+  border-radius: 16px;
+  background: var(--neo-surface);
+  box-shadow: var(--neo-inset);
+}
+
+.cpu-modo-btns {
+  border: 0;
+  border-radius: var(--neo-radius);
+  background: var(--neo-surface);
+  box-shadow: var(--neo-inset);
+  padding: 0.25rem;
+  gap: 0.25rem;
+}
+
+.cpu-modo-btn,
+.cpu-modo-btn:not(:last-child) {
+  border: 0;
+  border-radius: 10px;
+  color: var(--neo-muted);
+}
+
+.cpu-modo-btn.active {
+  background: var(--neo-surface);
+  color: var(--neo-indigo);
+  box-shadow: var(--neo-shadow);
+}

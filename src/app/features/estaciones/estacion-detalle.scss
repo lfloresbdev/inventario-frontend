@@ -1,0 +1,79 @@
+.back {
+  display: inline-flex;
+  align-items: center;
+  color: var(--p-text-muted-color);
+  padding: 0.4rem;
+  border-radius: 0.5rem;
+}
+
+.back:hover {
+  background: var(--p-surface-100);
+  color: var(--p-text-color);
+}
+
+.back svg {
+  fill: currentcolor;
+}
+
+.item-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.item {
+  padding: 0.75rem 1rem;
+  background: var(--p-surface-0);
+  border: 1px solid var(--p-surface-200);
+  border-radius: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.item-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.item-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 600;
+  min-width: 0;
+
+  app-icon {
+    flex: 0 0 auto;
+    color: var(--device-accent, var(--access-accent, var(--neo-muted)));
+  }
+}
+
+.tab-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.item-main-end {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+  color: var(--p-text-muted-color);
+}
+
+.muted {
+  color: var(--p-text-muted-color);
+  text-align: center;
+  padding: 1.5rem 0;
+}

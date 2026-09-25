@@ -1,0 +1,293 @@
+<p-toast position="top-right" />
+<p-confirm-dialog />
+
+<header class="page-header">
+  <h1>Administración</h1>
+</header>
+
+<section class="page-content">
+  <p-tabs class="admin-tabs" [(value)]="tabIndex">
+    <p-tablist>
+      <p-tab value="0"><span class="tab-label"><app-icon name="devices" size="1rem" />Dispositivos</span></p-tab>
+      <p-tab value="1"><span class="tab-label"><app-icon name="store" size="1rem" />Locales</span></p-tab>
+      <p-tab value="2"><span class="tab-label"><app-icon name="map-pin" size="1rem" />Ubicaciones</span></p-tab>
+    </p-tablist>
+
+    <!-- ── Dispositivos ─────────────────────────────── -->
+    <p-tabpanels>
+      <p-tabpanel value="0">
+        <div class="admin-panel">
+          <div class="admin-panel-header">
+            <span class="admin-count">{{ dispositivos().length }} dispositivos</span>
+            <p-button severity="primary" size="small" (onClick)="abrirNuevoDisp()">
+              <svg data-p-icon="plus" style="width:.9rem;height:.9rem"></svg>
+              <span>Nuevo</span>
+            </p-button>
+          </div>
+          @if (loadingDisp()) {
+            <div class="admin-list">
+              @for (_ of [1,2,3]; track $index) {
+                <div class="admin-row"><p-skeleton height="2.5rem" /></div>
+              }
+            </div>
+          } @else if (dispositivos().length === 0) {
+            <p class="admin-empty">Sin dispositivos</p>
+          } @else {
+            <p-accordion class="device-accordion" [multiple]="true" [(value)]="dispositivosAbiertos">
+              @for (d of dispositivos(); track d.id) {
+                <p-accordion-panel [value]="d.id">
+                  <p-accordion-header>
+                    <div class="admin-row-head">
+                      <div class="admin-row-main">
+                        <span class="admin-row-name">{{ d.nombre }}</span>
+                        @if (d.esComponenteCpu) {
+                          <span class="admin-row-sub">Componente de CPU</span>
+                        }
+                      </div>
+                      <div class="admin-row-actions" (click)="$event.stopPropagation()">
+                        <p-button severity="primary" [text]="true" size="small" (onClick)="toggleAgregarMarca(d)" pTooltip="Agregar marca">
+                          <app-icon name="circle-plus" size="1rem" />
+                        </p-button>
+                        <p-button severity="secondary" [text]="true" size="small" (onClick)="abrirEditarDisp(d)" pTooltip="Editar dispositivo">
+                          <svg data-p-icon="pencil" style="width:.9rem;height:.9rem"></svg>
+                        </p-button>
+                        <p-button severity="danger" [text]="true" size="small" (onClick)="eliminarDisp(d)" pTooltip="Eliminar dispositivo">
+                          <svg data-p-icon="trash" style="width:.9rem;height:.9rem"></svg>
+                        </p-button>
+                      </div>
+                    </div>
+                  </p-accordion-header>
+
+                  <p-accordion-content>
+                    @if (agregandoMarcaDispId === d.id) {
+                      <div class="marca-add-row">
+                        <input pInputText [(ngModel)]="nuevaMarcaNombre" placeholder="Nueva marca" (keyup.enter)="crearMarcaPara(d)" />
+                        <p-button severity="primary" [text]="true" size="small" (onClick)="crearMarcaPara(d)" pTooltip="Guardar">
+                          <app-icon name="save" size="1rem" />
+                        </p-button>
+                        <p-button severity="secondary" [text]="true" size="small" (onClick)="toggleAgregarMarca(d)" pTooltip="Cancelar">
+                          <app-icon name="close" size="1rem" />
+                        </p-button>
+                      </div>
+                    }
+
+                    @if (d.marcas && d.marcas.length) {
+                      <ul class="marca-sublist">
+                        @for (m of d.marcas; track m.id) {
+                          <li class="marca-item">
+                            @if (marcaEditandoId === m.id) {
+                              <input pInputText [(ngModel)]="marcaEditNombre" (keyup.enter)="guardarEdicionMarcaDe()" />
+                              <div class="marca-actions">
+                                <p-button severity="primary" [text]="true" size="small" (onClick)="guardarEdicionMarcaDe()" pTooltip="Guardar">
+                                  <app-icon name="save" size="0.9rem" />
+                                </p-button>
+                                <p-button severity="secondary" [text]="true" size="small" (onClick)="cancelarEdicionMarca()" pTooltip="Cancelar">
+                                  <app-icon name="close" size="0.9rem" />
+                                </p-button>
+                              </div>
+                            } @else {
+                              <span class="marca-name">{{ m.nombre }}</span>
+                              <div class="marca-actions">
+                                <p-button severity="secondary" [text]="true" size="small" (onClick)="editarMarcaDe(d, m)" pTooltip="Editar marca">
+                                  <svg data-p-icon="pencil" style="width:.8rem;height:.8rem"></svg>
+                                </p-button>
+                                <p-button severity="danger" [text]="true" size="small" (onClick)="eliminarMarcaDe(d, m)" pTooltip="Eliminar marca">
+                                  <svg data-p-icon="trash" style="width:.8rem;height:.8rem"></svg>
+                                </p-button>
+                              </div>
+                            }
+                          </li>
+                        }
+                      </ul>
+                    } @else {
+                      <p class="marca-empty">Sin marcas</p>
+                    }
+                  </p-accordion-content>
+                </p-accordion-panel>
+              }
+            </p-accordion>
+          }
+        </div>
+      </p-tabpanel>
+
+      <!-- ── Locales ─────────────────────────────────── -->
+      <p-tabpanel value="1">
+        <div class="admin-panel">
+          <div class="admin-panel-header">
+            <span class="admin-count">{{ locales().length }} locales</span>
+            <p-button severity="primary" size="small" (onClick)="abrirNuevoLocal()">
+              <svg data-p-icon="plus" style="width:.9rem;height:.9rem"></svg>
+              <span>Nuevo</span>
+            </p-button>
+          </div>
+          @if (loadingLocal()) {
+            <div class="admin-list">
+              @for (_ of [1,2,3]; track $index) {
+                <div class="admin-row"><p-skeleton height="2.5rem" /></div>
+              }
+            </div>
+          } @else if (locales().length === 0) {
+            <p class="admin-empty">Sin locales</p>
+          } @else {
+            <ul class="admin-list">
+              @for (l of locales(); track l.id) {
+                <li class="admin-row" [class.inactive]="!l.activo">
+                  <span class="admin-row-name">{{ l.nombre }}</span>
+                  <p-tag [value]="l.empresa" severity="secondary" />
+                  @if (!l.activo) {
+                    <p-tag value="Baja" severity="danger" />
+                  }
+                  <div class="admin-row-actions">
+                    <p-button severity="secondary" [text]="true" size="small" (onClick)="abrirEditarLocal(l)" pTooltip="Editar">
+                      <svg data-p-icon="pencil" style="width:.9rem;height:.9rem"></svg>
+                    </p-button>
+                    @if (l.activo) {
+                      <p-button severity="danger" [text]="true" size="small" (onClick)="darDeBajaLocal(l)" pTooltip="Dar de baja">
+                        <svg data-p-icon="trash" style="width:.9rem;height:.9rem"></svg>
+                      </p-button>
+                    } @else {
+                      <p-button severity="success" [text]="true" size="small" (onClick)="reactivarLocal(l)" pTooltip="Reactivar">
+                        <app-icon name="restore" size="0.9rem" />
+                      </p-button>
+                    }
+                  </div>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </p-tabpanel>
+
+      <!-- ── Ubicaciones ─────────────────────────────── -->
+      <p-tabpanel value="2">
+        <div class="admin-panel">
+          <div class="admin-panel-header">
+            <span class="admin-count">{{ ubicaciones().length }} ubicaciones</span>
+            <p-button severity="primary" size="small" (onClick)="abrirNuevaUbic()">
+              <svg data-p-icon="plus" style="width:.9rem;height:.9rem"></svg>
+              <span>Nueva</span>
+            </p-button>
+          </div>
+          @if (loadingUbic()) {
+            <div class="admin-list">
+              @for (_ of [1,2,3]; track $index) {
+                <div class="admin-row"><p-skeleton height="2.5rem" /></div>
+              }
+            </div>
+          } @else if (ubicaciones().length === 0) {
+            <p class="admin-empty">Sin ubicaciones</p>
+          } @else {
+            <ul class="admin-list">
+              @for (u of ubicaciones(); track u.id) {
+                <li class="admin-row" [class.inactive]="!u.activo">
+                  <span class="admin-row-name">{{ u.nombre }}</span>
+                  <span class="admin-row-sub">{{ u.local?.nombre }}</span>
+                  @if (!u.activo) {
+                    <p-tag value="Baja" severity="danger" />
+                  }
+                  <div class="admin-row-actions">
+                    <p-button severity="secondary" [text]="true" size="small" (onClick)="abrirEditarUbic(u)" pTooltip="Editar">
+                      <svg data-p-icon="pencil" style="width:.9rem;height:.9rem"></svg>
+                    </p-button>
+                    @if (u.activo) {
+                      <p-button severity="danger" [text]="true" size="small" (onClick)="darDeBajaUbic(u)" pTooltip="Dar de baja">
+                        <svg data-p-icon="trash" style="width:.9rem;height:.9rem"></svg>
+                      </p-button>
+                    } @else {
+                      <p-button severity="success" [text]="true" size="small" (onClick)="reactivarUbic(u)" pTooltip="Reactivar">
+                        <app-icon name="restore" size="0.9rem" />
+                      </p-button>
+                    }
+                  </div>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </p-tabpanel>
+    </p-tabpanels>
+  </p-tabs>
+</section>
+
+<!-- ── Drawer: Dispositivo ──────────────────────────── -->
+<p-drawer
+  [(visible)]="drawerDisp"
+  [header]="editandoDispId ? 'Editar dispositivo' : 'Nuevo dispositivo'"
+  position="right"
+  styleClass="admin-drawer"
+>
+  <div class="drawer-body">
+    <p-floatlabel variant="on">
+      <input pInputText id="disp-nombre" [(ngModel)]="dispNombre" />
+      <label for="disp-nombre">Nombre</label>
+    </p-floatlabel>
+
+    <div class="disp-componente-row">
+      <p-checkbox [(ngModel)]="dispEsComponente" [binary]="true" inputId="disp-componente" />
+      <label for="disp-componente">Es componente de CPU (RAM, Disco, Procesador)</label>
+    </div>
+
+    <div class="drawer-footer">
+      <p-button severity="secondary" [outlined]="true" (onClick)="drawerDisp = false"><app-icon name="close" size="0.9rem" />Cancelar</p-button>
+      <p-button severity="primary" [disabled]="!dispNombre.trim()" (onClick)="guardarDisp()"><app-icon name="save" size="0.9rem" />Guardar</p-button>
+    </div>
+  </div>
+</p-drawer>
+
+<!-- ── Drawer: Local ────────────────────────────────── -->
+<p-drawer
+  [(visible)]="drawerLocal"
+  [header]="editandoLocalId ? 'Editar local' : 'Nuevo local'"
+  position="right"
+  styleClass="admin-drawer"
+>
+  <div class="drawer-body">
+    <p-floatlabel variant="on">
+      <input pInputText id="local-nombre" [(ngModel)]="localNombre" />
+      <label for="local-nombre">Nombre</label>
+    </p-floatlabel>
+    <p-floatlabel variant="on">
+      <p-select
+        inputId="local-empresa"
+        [options]="empresaOptions"
+        optionLabel="label"
+        optionValue="value"
+        [(ngModel)]="localEmpresa"
+      />
+      <label for="local-empresa">Empresa</label>
+    </p-floatlabel>
+    <div class="drawer-footer">
+      <p-button severity="secondary" [outlined]="true" (onClick)="drawerLocal = false"><app-icon name="close" size="0.9rem" />Cancelar</p-button>
+      <p-button severity="primary" [disabled]="!localNombre.trim() || !localEmpresa" (onClick)="guardarLocal()"><app-icon name="save" size="0.9rem" />Guardar</p-button>
+    </div>
+  </div>
+</p-drawer>
+
+<!-- ── Drawer: Ubicación ────────────────────────────── -->
+<p-drawer
+  [(visible)]="drawerUbic"
+  [header]="editandoUbicId ? 'Editar ubicación' : 'Nueva ubicación'"
+  position="right"
+  styleClass="admin-drawer"
+>
+  <div class="drawer-body">
+    <p-floatlabel variant="on">
+      <input pInputText id="ubic-nombre" [(ngModel)]="ubicNombre" />
+      <label for="ubic-nombre">Nombre</label>
+    </p-floatlabel>
+    <p-floatlabel variant="on">
+      <p-select
+        inputId="ubic-local"
+        [options]="localesActivos"
+        optionLabel="nombre"
+        optionValue="id"
+        [(ngModel)]="ubicLocalId"
+      />
+      <label for="ubic-local">Local</label>
+    </p-floatlabel>
+    <div class="drawer-footer">
+      <p-button severity="secondary" [outlined]="true" (onClick)="drawerUbic = false"><app-icon name="close" size="0.9rem" />Cancelar</p-button>
+      <p-button severity="primary" [disabled]="!ubicNombre.trim() || !ubicLocalId" (onClick)="guardarUbic()"><app-icon name="save" size="0.9rem" />Guardar</p-button>
+    </div>
+  </div>
+</p-drawer>
