@@ -1,4 +1,11 @@
-import { DiscoTipo, Empresa, RamTipo, TipoAcceso } from '../models/inventario.models';
+import {
+  DiscoTipo,
+  Empresa,
+  EstadoFisico,
+  EstadoLogico,
+  RamTipo,
+  TipoAcceso,
+} from '../models/inventario.models';
 
 export interface EnumOption<T> {
   value: T;
@@ -28,6 +35,22 @@ export const TIPO_ACCESO_LABELS: Record<TipoAcceso, string> = {
   [TipoAcceso.ALBRU]: 'ALBRU',
 };
 
+export const ESTADO_FISICO_LABELS: Record<EstadoFisico, string> = {
+  [EstadoFisico.EN_ALMACEN]: 'En almacén',
+  [EstadoFisico.OPERATIVO]: 'Operativo',
+  [EstadoFisico.DANADO]: 'Dañado',
+  [EstadoFisico.EN_REPARACION]: 'En reparación',
+  [EstadoFisico.OBSOLETO]: 'Obsoleto',
+};
+
+export const ESTADO_LOGICO_LABELS: Record<EstadoLogico, string> = {
+  [EstadoLogico.SIN_ASIGNAR]: 'Sin asignar',
+  [EstadoLogico.ASIGNADO]: 'Asignado',
+  [EstadoLogico.BLOQUEADO]: 'Bloqueado',
+  [EstadoLogico.NUMERO_PERDIDO]: 'N° perdido',
+  [EstadoLogico.SIN_ACCESO]: 'Sin acceso',
+};
+
 const toOptions = <T extends string>(labels: Record<string, string>, values: T[]): EnumOption<T>[] =>
   values.map((value) => ({ value, label: labels[value] ?? String(value) }));
 
@@ -39,6 +62,22 @@ export const TIPO_ACCESO_OPTIONS: EnumOption<TipoAcceso>[] = toOptions(
   TIPO_ACCESO_LABELS,
   Object.values(TipoAcceso),
 );
+
+/**
+ * Sólo las condiciones son elegibles: "Operativo" y "En almacén" los deriva el backend de la
+ * asignación a estación, así que ofrecerlos en el formulario sería engañoso.
+ */
+export const ESTADO_FISICO_OPTIONS: EnumOption<EstadoFisico>[] = toOptions(ESTADO_FISICO_LABELS, [
+  EstadoFisico.DANADO,
+  EstadoFisico.EN_REPARACION,
+  EstadoFisico.OBSOLETO,
+]);
+
+export const ESTADO_LOGICO_OPTIONS: EnumOption<EstadoLogico>[] = toOptions(ESTADO_LOGICO_LABELS, [
+  EstadoLogico.BLOQUEADO,
+  EstadoLogico.NUMERO_PERDIDO,
+  EstadoLogico.SIN_ACCESO,
+]);
 
 export const EMPRESA_OPTIONS: EnumOption<Empresa>[] = [
   { value: Empresa.LYBTEL, label: 'LYBTEL' },

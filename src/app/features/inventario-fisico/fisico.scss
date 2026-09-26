@@ -188,6 +188,200 @@
   text-align: right;
 }
 
+/* ---- Vista agrupada por dispositivo ---- */
+
+.grupo-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+/* El acento lo aporta la clase global .device-* del template. No se declara aquí
+   un valor por defecto porque este SCSS está encapsulado y ganaría en especificidad;
+   el fallback va en cada punto de consumo. */
+.grupo {
+  border-radius: 16px;
+  background: var(--neo-surface);
+  box-shadow: var(--neo-shadow);
+  overflow: hidden;
+}
+
+.grupo-cabecera {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 0.8rem;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+.grupo-icono {
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  color: var(--device-accent, #64748b);
+  background: var(--neo-surface);
+  box-shadow: var(--neo-shadow);
+}
+
+.grupo-cabecera.abierto .grupo-icono {
+  box-shadow: var(--neo-inset);
+}
+
+.grupo-nombre {
+  flex: 1;
+  min-width: 0;
+  font-family: 'Space Grotesk', Inter, sans-serif;
+  font-weight: 800;
+  font-size: 0.95rem;
+  letter-spacing: -0.02em;
+  color: var(--device-accent, #64748b);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contadores {
+  display: flex;
+  gap: 0.2rem;
+  flex: 0 0 auto;
+}
+
+.contador {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.05rem;
+  min-width: 2.6rem;
+  padding: 0.25rem 0.3rem;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  transition: background 0.15s, box-shadow 0.15s;
+
+  small {
+    font-size: 0.56rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--neo-muted);
+  }
+
+  strong {
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  &.activo {
+    box-shadow: var(--neo-inset);
+  }
+}
+
+.contador.total strong { color: var(--neo-text); }
+.contador.operativo strong { color: #0369a1; }
+.contador.danado strong { color: #b91c1c; }
+.contador.almacen strong { color: #047857; }
+
+.barra {
+  display: flex;
+  height: 4px;
+  gap: 2px;
+  padding: 0 0.8rem 0.6rem;
+  background: none;
+
+  span {
+    border-radius: 99px;
+    min-width: 0;
+  }
+}
+
+.seg-operativo { background: #0ea5e9; }
+.seg-danado { background: #ef4444; }
+.seg-almacen { background: #10b981; }
+
+.grupo-items {
+  padding: 0.2rem 0.5rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.grupo-vacio {
+  margin: 0;
+  padding: 0.8rem;
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--neo-muted);
+}
+
+.item-fila {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 11px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: box-shadow 0.15s;
+
+  &:hover {
+    box-shadow: var(--neo-inset);
+  }
+
+  span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.col-marca { font-weight: 600; }
+.col-modelo,
+.col-estacion { color: var(--neo-muted); }
+
+.col-acciones {
+  display: flex;
+  gap: 0.1rem;
+  justify-content: flex-end;
+  overflow: visible;
+}
+
+@media (max-width: 560px) {
+  .grupo-cabecera {
+    flex-wrap: wrap;
+  }
+
+  .grupo-nombre {
+    flex: 1 1 100%;
+    order: -1;
+  }
+
+  .contadores {
+    flex: 1;
+    justify-content: space-between;
+  }
+
+  .item-fila {
+    grid-template-columns: 1fr 1fr auto;
+  }
+
+  .col-modelo {
+    display: none;
+  }
+}
+
 .form-2col {
   display: grid;
   grid-template-columns: 1fr 1fr;

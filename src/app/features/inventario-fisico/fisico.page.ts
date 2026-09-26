@@ -24,6 +24,7 @@ import {
   DispositivoResponse,
   Empresa,
   EstacionResponse,
+  EstadoFisico,
   InventarioFisicoRequest,
   InventarioFisicoResponse,
   LocalResponse,
@@ -40,10 +41,22 @@ import { LocalService } from '../../services/local.service';
 import { UbicacionFisicaService } from '../../services/ubicacion-fisica.service';
 import { AuthService } from '../../services/auth.service';
 import { parseApiError } from '../../services/api-utils';
-import { DISCO_CAPACIDAD_OPTIONS, DISCO_OPTIONS, EMPRESA_OPTIONS, PROCESADOR_OPTIONS, RAM_CAPACIDAD_OPTIONS, RAM_OPTIONS } from '../../shared/enum-options';
-import { RamTipoPipe, DiscoTipoPipe } from '../../shared/enum-pipes';
+import { DISCO_CAPACIDAD_OPTIONS, DISCO_OPTIONS, EMPRESA_OPTIONS, ESTADO_FISICO_OPTIONS, PROCESADOR_OPTIONS, RAM_CAPACIDAD_OPTIONS, RAM_OPTIONS } from '../../shared/enum-options';
+import { RamTipoPipe, DiscoTipoPipe, EstadoFisicoPipe } from '../../shared/enum-pipes';
 import { IconComponent } from '../../shared/icon.component';
 import { deviceVisualType as resolveDeviceIcon } from '../../shared/visual-type';
+
+/** Fila de la vista agrupada: un dispositivo con sus items y los contadores por estado. */
+interface GrupoDispositivo {
+  dispositivo: DispositivoResponse;
+  items: InventarioFisicoResponse[];
+  total: number;
+  operativo: number;
+  danado: number;
+  almacen: number;
+  enReparacion: number;
+  obsoleto: number;
+}
 
 @Component({
   selector: 'app-fisico',
@@ -66,6 +79,7 @@ import { deviceVisualType as resolveDeviceIcon } from '../../shared/visual-type'
     TimesCircle,
     RamTipoPipe,
     DiscoTipoPipe,
+    EstadoFisicoPipe,
     ConfirmDialogModule,
     IconComponent,
   ],
@@ -92,9 +106,76 @@ export class FisicoPage implements OnInit {
   ubicaciones = signal<UbicacionFisicaResponse[]>([]);
   loading = signal(false);
 
-  filtroLocalId: number | null = null;
-  filtroUbicacionId: number | null = null;
-  filtroDispositivoId: number | null = null;
+  // Signals: los consumen computed() de agrupación y filtrado
+  readonly filtroLocalId = signal<number | null>(null);
+  readonly filtroUbicacionId = signal<number | null>(null);
+
+  /** Dispositivo desplegado; sólo uno a la vez. */
+  readonly grupoAbierto = signal<number | null>(null);
+  /** Contador pulsado dentro del grupo abierto. null = TOTAL = sin filtro. */
+  readonly filtroEstado = signal<EstadoFisico | null>(null);
+
+  /**
+   * Base sobre la que se cuenta: filtrada por Local y Ubicación, nunca por estado.
+   * Si el estado entrara aquí, al pulsar DAÑADO los demás contadores caerían a cero.
+   */
+  readonly itemsFiltrados = computed(() => {
+    const localId = this.filtroLocalId();
+    const ubicacionId = this.filtroUbicacionId();
+    if (localId == null && ubicacionId == null) return this.items();
+
+    // La ubicación no viaja en el item: se resuelve a través de su estación
+    const ubicacionPorEstacion = new Map(
+      this.estaciones().map((e) => [e.id, e.ubicacionFisica?.id]),
+    );
+    return this.items().filter((i) => {
+      if (localId != null && i.local?.id !== localId) return false;
+      if (ubicacionId != null && ubicacionPorEstacion.get(i.estacionId ?? -1) !== ubicacionId) {
+        return false;
+      }
+      return true;
+    });
+  });
+
+  /** Una fila por dispositivo del catálogo, incluidos los que no tienen items. */
+  readonly grupos = computed<GrupoDispositivo[]>(() => {
+    const porDispositivo = new Map<number, InventarioFisicoResponse[]>();
+    for (const item of this.itemsFiltrados()) {
+      const id = item.dispositivo?.id;
+      if (id == null) continue;
+      const lista = porDispositivo.get(id);
+      if (lista) lista.push(item);
+      else porDispositivo.set(id, [item]);
+    }
+
+    return this.dispositivos()
+      .map((dispositivo) => {
+        const items = porDispositivo.get(dispositivo.id) ?? [];
+        let operativo = 0, danado = 0, almacen = 0, enReparacion = 0, obsoleto = 0;
+        for (const i of items) {
+          switch (i.estado) {
+            case EstadoFisico.OPERATIVO: operativo++; break;
+            case EstadoFisico.DANADO: danado++; break;
+            case EstadoFisico.EN_ALMACEN: almacen++; break;
+            case EstadoFisico.EN_REPARACION: enReparacion++; break;
+            case EstadoFisico.OBSOLETO: obsoleto++; break;
+          }
+        }
+        // enReparacion y obsoleto se calculan pero todavía no se pintan
+        return { dispositivo, items, total: items.length, operativo, danado, almacen, enReparacion, obsoleto };
+      })
+      .sort((a, b) => a.dispositivo.nombre.localeCompare(b.dispositivo.nombre));
+  });
+
+  /** Items del grupo desplegado, ya con el filtro de estado aplicado. */
+  readonly itemsDelGrupo = computed(() => {
+    const id = this.grupoAbierto();
+    if (id == null) return [];
+    const grupo = this.grupos().find((g) => g.dispositivo.id === id);
+    if (!grupo) return [];
+    const estado = this.filtroEstado();
+    return estado ? grupo.items.filter((i) => i.estado === estado) : grupo.items;
+  });
 
   detalleVisible = false;
   itemDetalle = signal<InventarioFisicoResponse | null>(null);
@@ -138,6 +219,8 @@ export class FisicoPage implements OnInit {
   estacionId: number | null = null;
   empresaForm: Empresa | undefined;
   hostname = '';
+  /** Sólo condiciones; vacío significa "en buen estado" y lo resuelve el backend. */
+  estadoForm: EstadoFisico | null = null;
 
   marcasFiltradas = signal<MarcaResponse[]>([]);
 
@@ -353,6 +436,8 @@ export class FisicoPage implements OnInit {
   readonly procesadorOptions = PROCESADOR_OPTIONS;
   readonly ramCapacidadOptions = RAM_CAPACIDAD_OPTIONS;
   readonly discoCapacidadOptions = DISCO_CAPACIDAD_OPTIONS;
+  readonly estadoOptions = ESTADO_FISICO_OPTIONS;
+  readonly EstadoFisico = EstadoFisico;
 
   get isAdmin(): boolean {
     return this.auth.rol() === Rol.ADMIN;
@@ -396,40 +481,36 @@ export class FisicoPage implements OnInit {
     });
   }
 
-  onFiltroLocalChange(): void {
-    this.filtroUbicacionId = null;
+  onFiltroLocalChange(localId: number | null): void {
+    this.filtroLocalId.set(localId);
+    this.filtroUbicacionId.set(null);
     this.ubicaciones.set([]);
-    if (this.filtroLocalId != null) {
-      this.ubicacionService.listarPorLocal(this.filtroLocalId).subscribe({
+    if (localId != null) {
+      this.ubicacionService.listarPorLocal(localId).subscribe({
         next: (data) => this.ubicaciones.set(data),
         error: () => {},
       });
     }
-    this.aplicarFiltros();
   }
 
-  aplicarFiltros(): void {
-    this.loading.set(true);
-    let obs$;
-    if (this.filtroDispositivoId != null) {
-      obs$ = this.service.porDispositivo(this.filtroDispositivoId);
-    } else if (this.filtroUbicacionId != null) {
-      obs$ = this.service.porUbicacion(this.filtroUbicacionId);
-    } else if (this.filtroLocalId != null) {
-      obs$ = this.service.porLocal(this.filtroLocalId);
-    } else {
-      const empresa = this.auth.empresa();
-      obs$ = empresa
-        ? this.service.porEmpresa(empresa)
-        : forkJoin([
-            this.service.porEmpresa(Empresa.LYBTEL),
-            this.service.porEmpresa(Empresa.RUNA),
-          ]).pipe(map(([a, b]) => [...a, ...b]));
-    }
-    obs$.subscribe({
-      next: (data) => { this.items.set(data); this.loading.set(false); },
-      error: (err) => { this.loading.set(false); this.ms.add({ severity: 'error', summary: 'Error', detail: parseApiError(err).mensaje }); },
-    });
+  /**
+   * Única ida al servidor. El filtrado por Local y Ubicación se deriva en cliente, así que
+   * recargar no toca el grupo desplegado ni el contador seleccionado.
+   */
+  recargar(): void {
+    this.cargarTodos();
+  }
+
+  toggleGrupo(dispositivoId: number): void {
+    const yaAbierto = this.grupoAbierto() === dispositivoId;
+    this.grupoAbierto.set(yaAbierto ? null : dispositivoId);
+    if (!yaAbierto) this.filtroEstado.set(null);
+  }
+
+  /** Pulsar un contador despliega el grupo y filtra; TOTAL pasa null y limpia el filtro. */
+  filtrarPorEstado(dispositivoId: number, estado: EstadoFisico | null): void {
+    this.grupoAbierto.set(dispositivoId);
+    this.filtroEstado.set(estado);
   }
 
   get isCpu(): boolean {
@@ -477,7 +558,7 @@ export class FisicoPage implements OnInit {
         this.componenteDrawerVisible = false;
         this.ms.add({ severity: 'success', summary: 'Listo', detail: 'Componente agregado', life: 3000 });
         this.cargarComponentesCpu(det.id);
-        this.aplicarFiltros();
+        this.recargar();
       },
       error: (err) => this.ms.add({ severity: 'error', summary: 'Error', detail: parseApiError(err).mensaje, life: 5000 }),
     });
@@ -497,7 +578,7 @@ export class FisicoPage implements OnInit {
             this.ms.add({ severity: 'success', summary: 'Listo', detail: 'Componente liberado', life: 3000 });
             const det = this.itemDetalle();
             if (det) this.cargarComponentesCpu(det.id);
-            this.aplicarFiltros();
+            this.recargar();
           },
           error: (err) => this.ms.add({ severity: 'error', summary: 'Error', detail: parseApiError(err).mensaje, life: 5000 }),
         });
@@ -538,6 +619,12 @@ export class FisicoPage implements OnInit {
     this.discoEspacio = item.discoEspacio ?? null;
     this.estacionId = item.estacionId ?? null;
     this.hostname = item.hostname ?? '';
+    // Los estados de ubicación los deriva el backend: sólo se precarga si es una condición
+    this.estadoForm = item.estado === EstadoFisico.DANADO
+      || item.estado === EstadoFisico.EN_REPARACION
+      || item.estado === EstadoFisico.OBSOLETO
+      ? item.estado
+      : null;
     if (item.dispositivo?.id != null) {
       this.marcaService.listarPorDispositivo(item.dispositivo.id).subscribe({
         next: (marcas) => this.marcasFiltradas.set(marcas),
@@ -561,6 +648,7 @@ export class FisicoPage implements OnInit {
     this.estacionId = null;
     this.empresaForm = undefined;
     this.hostname = '';
+    this.estadoForm = null;
     this.cpuModo = 'armada';
     this.compRamId = null;
     this.compProcesadorId = null;
@@ -620,6 +708,11 @@ export class FisicoPage implements OnInit {
     if (this.discoEspacio != null) request.discoEspacio = this.discoEspacio;
     if (this.estacionId != null) request.estacionId = this.estacionId;
     if (this.hostname.trim()) request.hostname = this.hostname.trim();
+    // La condición sólo se edita en items existentes; al crear se omite y manda el default
+    // de la entidad. Al limpiarla se envía EN_ALMACEN y el backend recalcula la ubicación.
+    if (this.editandoId != null) {
+      request.estado = this.estadoForm ?? EstadoFisico.EN_ALMACEN;
+    }
 
     if (this.editandoId == null) {
       this.service.crear(request).pipe(
@@ -679,7 +772,7 @@ export class FisicoPage implements OnInit {
   private onSaved(detail: string): void {
     this.drawerVisible = false;
     this.ms.add({ severity: 'success', summary: 'Listo', detail, life: 3000 });
-    this.aplicarFiltros();
+    this.recargar();
   }
 
   abrirAsignarEstacion(item: InventarioFisicoResponse): void {
@@ -726,7 +819,7 @@ export class FisicoPage implements OnInit {
       next: () => {
         this.asignarDrawerVisible = false;
         this.ms.add({ severity: 'success', summary: 'Listo', detail: 'Item asignado a estación', life: 3000 });
-        this.aplicarFiltros();
+        this.recargar();
       },
       error: (err) => this.ms.add({ severity: 'error', summary: 'Error', detail: parseApiError(err).mensaje, life: 5000 }),
     });
@@ -739,7 +832,7 @@ export class FisicoPage implements OnInit {
       next: () => {
         this.asignarDrawerVisible = false;
         this.ms.add({ severity: 'success', summary: 'Listo', detail: 'Dispositivo reemplazado', life: 3000 });
-        this.aplicarFiltros();
+        this.recargar();
       },
       error: (err) => this.ms.add({ severity: 'error', summary: 'Error', detail: parseApiError(err).mensaje, life: 5000 }),
     });
@@ -755,7 +848,7 @@ export class FisicoPage implements OnInit {
       acceptButtonStyleClass: 'p-button-danger',
       accept: () => {
         this.service.eliminar(item.id).subscribe({
-          next: () => { this.ms.add({ severity: 'success', summary: 'Listo', detail: 'Elemento eliminado', life: 3000 }); this.aplicarFiltros(); },
+          next: () => { this.ms.add({ severity: 'success', summary: 'Listo', detail: 'Elemento eliminado', life: 3000 }); this.recargar(); },
           error: (err) => this.ms.add({ severity: 'error', summary: 'Error', detail: parseApiError(err).mensaje, life: 5000 }),
         });
       },
@@ -772,7 +865,7 @@ export class FisicoPage implements OnInit {
       acceptButtonStyleClass: 'p-button-danger',
       accept: () => {
         this.service.quitarEstacion(item.id).subscribe({
-          next: () => { this.ms.add({ severity: 'success', summary: 'Listo', detail: 'Item liberado', life: 3000 }); this.aplicarFiltros(); },
+          next: () => { this.ms.add({ severity: 'success', summary: 'Listo', detail: 'Item liberado', life: 3000 }); this.recargar(); },
           error: (err) => this.ms.add({ severity: 'error', summary: 'Error', detail: parseApiError(err).mensaje, life: 5000 }),
         });
       },
@@ -786,5 +879,10 @@ export class FisicoPage implements OnInit {
 
   deviceVisualType(item: InventarioFisicoResponse): string {
     return resolveDeviceIcon(item.dispositivo?.nombre);
+  }
+
+  /** Para las filas agrupadas, donde sólo se tiene el dispositivo y no un item. */
+  deviceIconDe(dispositivo: DispositivoResponse): string {
+    return resolveDeviceIcon(dispositivo?.nombre);
   }
 }

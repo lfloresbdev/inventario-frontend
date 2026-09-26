@@ -20,6 +20,27 @@ export enum DiscoTipo {
   M2 = 'M2',
 }
 
+/**
+ * Sólo las condiciones (DANADO, EN_REPARACION, OBSOLETO) se persisten de verdad:
+ * EN_ALMACEN y OPERATIVO los recalcula el backend según la asignación a estación.
+ */
+export enum EstadoFisico {
+  EN_ALMACEN = 'EN_ALMACEN',
+  OPERATIVO = 'OPERATIVO',
+  DANADO = 'DANADO',
+  EN_REPARACION = 'EN_REPARACION',
+  OBSOLETO = 'OBSOLETO',
+}
+
+/** Mismo criterio: ASIGNADO y SIN_ASIGNAR se derivan en el backend. */
+export enum EstadoLogico {
+  SIN_ASIGNAR = 'SIN_ASIGNAR',
+  ASIGNADO = 'ASIGNADO',
+  BLOQUEADO = 'BLOQUEADO',
+  NUMERO_PERDIDO = 'NUMERO_PERDIDO',
+  SIN_ACCESO = 'SIN_ACCESO',
+}
+
 export enum TipoAcceso {
   DISCORD = 'DISCORD',
   GOOGLE = 'GOOGLE',
@@ -96,6 +117,7 @@ export interface InventarioFisicoRequest {
   discoEspacio?: number;
   estacionId?: number;
   hostname?: string;
+  estado?: EstadoFisico;
 }
 
 export type InventarioFisicoUpdate = Partial<InventarioFisicoRequest>;
@@ -118,6 +140,7 @@ export interface InventarioFisicoResponse {
   discoEspacio?: number;
   hostname?: string;
   local?: LocalResponse;
+  estado: EstadoFisico;
 }
 
 export interface InventarioLogicoRequest {
@@ -126,6 +149,7 @@ export interface InventarioLogicoRequest {
   identificador: string;
   contrasena?: string;
   estacionId?: number;
+  estado?: EstadoLogico;
 }
 
 export type InventarioLogicoUpdate = Partial<InventarioLogicoRequest>;
@@ -135,6 +159,7 @@ export interface InventarioLogicoResponse {
   estacionId?: number;
   tipoAcceso: TipoAcceso;
   identificador: string;
+  estado: EstadoLogico;
 }
 
 export interface ContrasenaResponse {

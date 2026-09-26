@@ -15,95 +15,140 @@
       [options]="locales()"
       optionLabel="nombre"
       optionValue="id"
-      [(ngModel)]="filtroLocalId"
+      [ngModel]="filtroLocalId()"
+      (ngModelChange)="onFiltroLocalChange($event)"
       placeholder="Local"
       [showClear]="true"
-      (onChange)="onFiltroLocalChange()"
       style="min-width: 9rem"
     />
     <p-select
       [options]="ubicaciones()"
       optionLabel="nombre"
       optionValue="id"
-      [(ngModel)]="filtroUbicacionId"
+      [ngModel]="filtroUbicacionId()"
+      (ngModelChange)="filtroUbicacionId.set($event)"
       placeholder="Ubicación"
       [showClear]="true"
       [disabled]="ubicaciones().length === 0"
-      (onChange)="aplicarFiltros()"
-      style="min-width: 9rem"
-    />
-    <p-select
-      [options]="dispositivos()"
-      optionLabel="nombre"
-      optionValue="id"
-      [(ngModel)]="filtroDispositivoId"
-      placeholder="Dispositivo"
-      [showClear]="true"
-      (onChange)="aplicarFiltros()"
       style="min-width: 9rem"
     />
     @if (!loading()) {
-      <span class="item-count">{{ items().length }} {{ items().length === 1 ? 'item' : 'items' }}</span>
+      <span class="item-count">
+        {{ itemsFiltrados().length }} {{ itemsFiltrados().length === 1 ? 'item' : 'items' }}
+      </span>
     }
   </div>
 
   @if (loading()) {
-    <div class="list-grid">
-      @for (i of [1, 2, 3, 4]; track i) {
-        <p-skeleton height="8rem" borderRadius="0.75rem" />
+    <div class="grupo-lista">
+      @for (i of [1, 2, 3, 4, 5]; track i) {
+        <p-skeleton height="3.75rem" borderRadius="14px" />
       }
     </div>
-  } @else if (items().length === 0) {
+  } @else if (itemsFiltrados().length === 0) {
     <div class="empty-state">
       <svg data-p-icon="server" style="width: 3rem; height: 3rem"></svg>
       <p>No hay elementos</p>
     </div>
   } @else {
-    <div class="list-grid">
-      @for (item of items(); track item.id) {
-        <div class="card device-card card-clickable" [class]="'device-card device-' + deviceVisualType(item)" (click)="abrirDetalle(item)">
-          <div class="card-top">
-            <div class="device-heading">
-              <div class="device-icon" aria-hidden="true">
-                <app-icon [name]="deviceVisualType(item)" size="30px" />
-              </div>
-              <div>
-                <span class="card-title">{{ item.dispositivo?.nombre }}</span>
-                @if (item.hostname) {
-                  <span class="device-subtitle">{{ item.hostname }}</span>
+    <div class="grupo-lista">
+      @for (g of grupos(); track g.dispositivo.id) {
+        @if (g.total > 0) {
+          <div class="grupo" [class]="'grupo device-' + deviceIconDe(g.dispositivo)">
+            <button
+              type="button"
+              class="grupo-cabecera"
+              [class.abierto]="grupoAbierto() === g.dispositivo.id"
+              (click)="toggleGrupo(g.dispositivo.id)"
+            >
+              <span class="grupo-icono" aria-hidden="true">
+                <app-icon [name]="deviceIconDe(g.dispositivo)" size="24px" />
+              </span>
+              <span class="grupo-nombre">{{ g.dispositivo.nombre }}</span>
+
+              <span class="contadores" (click)="$event.stopPropagation()">
+                <button
+                  type="button"
+                  class="contador total"
+                  [class.activo]="grupoAbierto() === g.dispositivo.id && filtroEstado() === null"
+                  (click)="filtrarPorEstado(g.dispositivo.id, null)"
+                >
+                  <small>TOTAL</small><strong>{{ g.total }}</strong>
+                </button>
+                <button
+                  type="button"
+                  class="contador operativo"
+                  [class.activo]="filtroEstado() === EstadoFisico.OPERATIVO && grupoAbierto() === g.dispositivo.id"
+                  (click)="filtrarPorEstado(g.dispositivo.id, EstadoFisico.OPERATIVO)"
+                >
+                  <small>OPE</small><strong>{{ g.operativo }}</strong>
+                </button>
+                <button
+                  type="button"
+                  class="contador danado"
+                  [class.activo]="filtroEstado() === EstadoFisico.DANADO && grupoAbierto() === g.dispositivo.id"
+                  (click)="filtrarPorEstado(g.dispositivo.id, EstadoFisico.DANADO)"
+                >
+                  <small>DAÑ</small><strong>{{ g.danado }}</strong>
+                </button>
+                <button
+                  type="button"
+                  class="contador almacen"
+                  [class.activo]="filtroEstado() === EstadoFisico.EN_ALMACEN && grupoAbierto() === g.dispositivo.id"
+                  (click)="filtrarPorEstado(g.dispositivo.id, EstadoFisico.EN_ALMACEN)"
+                >
+                  <small>ALM</small><strong>{{ g.almacen }}</strong>
+                </button>
+              </span>
+            </button>
+
+            <!-- Proporción operativo / dañado / almacén -->
+            <div class="barra" aria-hidden="true">
+              <span class="seg-operativo" [style.flex]="g.operativo"></span>
+              <span class="seg-danado" [style.flex]="g.danado"></span>
+              <span class="seg-almacen" [style.flex]="g.almacen"></span>
+            </div>
+
+            @if (grupoAbierto() === g.dispositivo.id) {
+              <div class="grupo-items">
+                @if (itemsDelGrupo().length === 0) {
+                  <p class="grupo-vacio">Sin items en este estado</p>
+                } @else {
+                  @for (item of itemsDelGrupo(); track item.id) {
+                    <div class="item-fila" (click)="abrirDetalle(item)">
+                      <span class="col-marca">{{ item.marca?.nombre }}</span>
+                      <span class="col-modelo">{{ item.modelo || '—' }}</span>
+                      <span class="col-estacion">
+                        @if (item.estacionId) {
+                          {{ estacionNombre(item.estacionId) }}
+                        } @else if (item.parentId) {
+                          {{ item.parentHostname ? 'En CPU · ' + item.parentHostname : 'En CPU' }}
+                        } @else {
+                          <span class="muted-sm">{{ item.estado | estadoFisico }}</span>
+                        }
+                      </span>
+                      <span class="col-acciones" (click)="$event.stopPropagation()">
+                        @if (!item.estacionId && !item.parentId) {
+                          <p-button [text]="true" [rounded]="true" [iconOnly]="true" severity="secondary" (onClick)="abrirAsignarEstacion(item)">
+                            <svg data-p-icon="link" style="width: 1rem; height: 1rem"></svg>
+                          </p-button>
+                        }
+                        @if (item.estacionId) {
+                          <p-button [text]="true" [rounded]="true" [iconOnly]="true" severity="danger" (onClick)="desasignar(item)">
+                            <svg data-p-icon="times-circle" style="width: 1rem; height: 1rem"></svg>
+                          </p-button>
+                        }
+                        <p-button [text]="true" [rounded]="true" [iconOnly]="true" severity="danger" (onClick)="eliminar(item)">
+                          <svg data-p-icon="trash" style="width: 1rem; height: 1rem"></svg>
+                        </p-button>
+                      </span>
+                    </div>
+                  }
                 }
               </div>
-            </div>
-            <span class="brand-badge">{{ item.marca?.nombre }}</span>
-          </div>
-          <div class="card-footer" (click)="$event.stopPropagation()">
-            @if (item.estacionId) {
-              <p-tag [value]="estacionNombre(item.estacionId)" severity="info" />
-            } @else if (item.parentId) {
-              <p-tag
-                [value]="item.parentHostname ? 'En CPU · ' + item.parentHostname : 'En CPU'"
-                severity="warn"
-              />
-            } @else {
-              <span class="muted-sm">En almacén</span>
             }
-            <div class="card-actions">
-              @if (!item.estacionId && !item.parentId) {
-                <p-button [text]="true" [rounded]="true" [iconOnly]="true" severity="secondary" (onClick)="abrirAsignarEstacion(item)">
-                  <svg data-p-icon="link" style="width: 1rem; height: 1rem"></svg>
-                </p-button>
-              }
-              @if (item.estacionId) {
-                <p-button [text]="true" [rounded]="true" [iconOnly]="true" severity="danger" (onClick)="desasignar(item)">
-                  <svg data-p-icon="times-circle" style="width: 1rem; height: 1rem"></svg>
-                </p-button>
-              }
-              <p-button [text]="true" [rounded]="true" [iconOnly]="true" severity="danger" (onClick)="eliminar(item)">
-                <svg data-p-icon="trash" style="width: 1rem; height: 1rem"></svg>
-              </p-button>
-            </div>
           </div>
-        </div>
+        }
       }
     </div>
   }
@@ -388,6 +433,21 @@
           </p-floatlabel>
         }
       </div>
+    }
+
+    <!-- Al crear no se ofrece: todo item nace EN ALMACÉN -->
+    @if (editandoId != null) {
+      <p-floatlabel variant="on">
+        <p-select
+          [options]="estadoOptions"
+          optionLabel="label"
+          optionValue="value"
+          [(ngModel)]="estadoForm"
+          [showClear]="true"
+          class="w-full"
+        />
+        <label>Condición (vacío = en buen estado)</label>
+      </p-floatlabel>
     }
 
     @if (selectedDispositivoEsCpu) {
