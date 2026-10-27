@@ -105,3 +105,73 @@
   font-size: 0.8rem;
   color: var(--p-text-muted-color);
 }
+
+/* Contador de cables de poder: stepper + total libre tachado y restante. */
+.cable-counter {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.cable-stepper {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 10px;
+  background: var(--neo-surface, #eef1f6);
+  box-shadow: var(--neo-inset, inset 2px 2px 6px rgba(0, 0, 0, 0.12));
+  overflow: hidden;
+}
+
+.cable-btn {
+  width: 1.75rem;
+  height: 1.75rem;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--neo-indigo, #6366f1);
+  cursor: pointer;
+
+  &:disabled {
+    color: var(--p-text-muted-color);
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.cable-valor {
+  min-width: 1.5rem;
+  text-align: center;
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+
+.cable-info {
+  font-size: 0.72rem;
+  color: var(--p-text-muted-color);
+}
+
+.cable-cantidades {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.cable-cantidad {
+  font-weight: 800;
+  font-size: 0.8rem;
+  color: var(--neo-indigo, #6366f1);
+
+  &.tachado {
+    font-weight: 600;
+    color: var(--p-text-muted-color);
+    text-decoration: line-through;
+  }
+
+  &.restante {
+    color: var(--neo-indigo, #6366f1);
+  }
+}

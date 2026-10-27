@@ -201,43 +201,43 @@
         </div>
         <div class="form-field">
           <label class="field-label">Monitor *</label>
-          <p-select [options]="monitorOpciones()" optionLabel="label" optionValue="id"
-            [(ngModel)]="selMonitor" [placeholder]="monitorOpciones().length === 0 ? 'Sin stock' : 'Seleccionar'" class="w-full" />
+          <app-select-agrupado [opciones]="monitorOpciones()" [(value)]="selMonitor" />
         </div>
       </div>
       <div class="form-2col">
         <div class="form-field">
           <label class="field-label">Teclado *</label>
-          <p-select [options]="tecladoOpciones()" optionLabel="label" optionValue="id"
-            [(ngModel)]="selTeclado" [placeholder]="tecladoOpciones().length === 0 ? 'Sin stock' : 'Seleccionar'" class="w-full" />
+          <app-select-agrupado [opciones]="tecladoOpciones()" [(value)]="selTeclado" />
         </div>
         <div class="form-field">
           <label class="field-label">Mouse *</label>
-          <p-select [options]="mouseOpciones()" optionLabel="label" optionValue="id"
-            [(ngModel)]="selMouse" [placeholder]="mouseOpciones().length === 0 ? 'Sin stock' : 'Seleccionar'" class="w-full" />
+          <app-select-agrupado [opciones]="mouseOpciones()" [(value)]="selMouse" />
         </div>
       </div>
       <div class="form-field">
         <label class="field-label">Audífonos *</label>
-        <p-select [options]="aufifonosOpciones()" optionLabel="label" optionValue="id"
-          [(ngModel)]="selAudifonos" [placeholder]="aufifonosOpciones().length === 0 ? 'Sin stock' : 'Seleccionar'" class="w-full" />
+        <app-select-agrupado [opciones]="aufifonosOpciones()" [(value)]="selAudifonos" />
       </div>
-      <div class="form-2col">
-        <div class="form-field">
-          <label class="field-label">Cable poder 1 *</label>
-          <p-select [options]="cablePoder1Opciones" optionLabel="label" optionValue="id"
-            [(ngModel)]="selCablePoder1" [placeholder]="cablePoder1Opciones.length === 0 ? 'Sin stock' : 'Seleccionar'" class="w-full" />
-        </div>
-        <div class="form-field">
-          <label class="field-label">Cable poder 2 *</label>
-          <p-select [options]="cablePoder2Opciones" optionLabel="label" optionValue="id"
-            [(ngModel)]="selCablePoder2" [placeholder]="cablePoder2Opciones.length === 0 ? 'Sin stock' : 'Seleccionar'" class="w-full" />
+      <div class="form-field">
+        <label class="field-label">Cables de poder *</label>
+        <div class="cable-counter">
+          <div class="cable-stepper">
+            <button type="button" class="cable-btn" (click)="cambiarCables(-1)" [disabled]="cantidadCablesPoder <= 0" aria-label="Quitar">−</button>
+            <span class="cable-valor">{{ cantidadCablesPoder }}</span>
+            <button type="button" class="cable-btn" (click)="cambiarCables(1)" [disabled]="cantidadCablesPoder >= maxCablesPoder" aria-label="Agregar">+</button>
+          </div>
+          <span class="cable-info">Total restante</span>
+          <span class="cable-cantidades">
+            <span class="cable-cantidad" [class.tachado]="cantidadCablesPoder > 0">x{{ cablesPoderDisponibles }}</span>
+            @if (cantidadCablesPoder > 0) {
+              <span class="cable-cantidad restante">x{{ cablesPoderRestantes }}</span>
+            }
+          </span>
         </div>
       </div>
       <div class="form-field">
         <label class="field-label">Cable VGA o HDMI *</label>
-        <p-select [options]="cableVideoOpciones()" optionLabel="label" optionValue="id"
-          [(ngModel)]="selCableVideo" [placeholder]="cableVideoOpciones().length === 0 ? 'Sin stock' : 'Seleccionar'" class="w-full" />
+        <app-select-agrupado [opciones]="cableVideoOpciones()" [agrupado]="false" [(value)]="selCableVideo" />
       </div>
     } @else {
       <div class="form-2col">

@@ -52,6 +52,12 @@
   }
 }
 
+.item-count {
+  font-weight: 800;
+  font-size: 0.75rem;
+  color: var(--device-accent, var(--neo-indigo, #6366f1));
+}
+
 .tab-label {
   display: inline-flex;
   align-items: center;
@@ -76,4 +82,173 @@
   color: var(--p-text-muted-color);
   text-align: center;
   padding: 1.5rem 0;
+}
+
+/* Drawer "Agregar item": acordeón por categoría con los items libres. */
+.cat-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cat-label {
+  font-weight: 600;
+}
+
+.cat-pend {
+  font-size: 0.72rem;
+  color: var(--p-text-muted-color);
+}
+
+.cat-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    background: var(--p-surface-100);
+  }
+}
+
+.cat-item-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cat-item-add {
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--neo-indigo, #6366f1);
+}
+
+/* Opciones mostradas directamente dentro del panel del acordeón. */
+.cat-opciones {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.cat-op {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    background: var(--p-surface-100);
+  }
+}
+
+.cat-op-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cat-op-cant {
+  flex: 0 0 auto;
+  font-weight: 800;
+  font-size: 0.8rem;
+  color: var(--neo-indigo, #6366f1);
+}
+
+.cat-grupo-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 700;
+}
+
+/* Contador de cables de poder dentro del drawer. */
+.cable-counter {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.cable-stepper {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 10px;
+  background: var(--neo-surface, #eef1f6);
+  box-shadow: var(--neo-inset, inset 2px 2px 6px rgba(0, 0, 0, 0.12));
+  overflow: hidden;
+}
+
+.cable-btn {
+  width: 1.75rem;
+  height: 1.75rem;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--neo-indigo, #6366f1);
+  cursor: pointer;
+
+  &:disabled {
+    color: var(--p-text-muted-color);
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.cable-valor {
+  min-width: 1.5rem;
+  text-align: center;
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+
+.cable-info {
+  font-size: 0.72rem;
+  color: var(--p-text-muted-color);
+}
+
+.cable-cantidades {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.cable-cantidad {
+  font-weight: 800;
+  font-size: 0.8rem;
+  color: var(--neo-indigo, #6366f1);
+
+  &.tachado {
+    font-weight: 600;
+    color: var(--p-text-muted-color);
+    text-decoration: line-through;
+  }
+
+  &.restante {
+    color: var(--neo-indigo, #6366f1);
+  }
 }

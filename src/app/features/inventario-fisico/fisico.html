@@ -1,12 +1,72 @@
 ﻿<p-toast position="top-right" />
 <p-confirm-dialog />
 
+<p-dialog
+  [(visible)]="compCardPopupVisible"
+  [header]="compCardSeleccionada()?.titulo ?? 'Componentes'"
+  [modal]="true"
+  [dismissableMask]="true"
+  [style]="{ width: '28rem' }"
+>
+  @if (compCardSeleccionada(); as card) {
+    <div class="comp-popup" [class]="'comp-popup device-' + card.icono">
+      <div class="comp-facets">
+        <div class="comp-facet" [class.activo]="compCardEstado() === null && compCardUbicacion() === null">
+          <button type="button" class="comp-facet-main" (click)="limpiarMatriz()">
+            <small>TOTAL</small>
+            <strong>{{ card.total }}</strong>
+          </button>
+        </div>
+
+        @for (fila of compCardMatriz(); track fila.estado) {
+          <div class="comp-facet" [class.activo]="compCardEstado() === fila.estado">
+            <button type="button" class="comp-facet-main" (click)="filtrarEstado(fila.estado)">
+              <small>{{ fila.corto }}</small>
+              <strong>{{ fila.total }}</strong>
+            </button>
+            @if (fila.conSplit) {
+              <div class="comp-facet-split">
+                <button
+                  type="button"
+                  class="comp-split"
+                  [class.activo]="compCardEstado() === fila.estado && compCardUbicacion() === 'SUELTO'"
+                  [disabled]="fila.suelto === 0"
+                  (click)="seleccionarMatriz(fila.estado, 'SUELTO')"
+                >{{ fila.suelto }} suelto{{ fila.suelto === 1 ? '' : 's' }}</button>
+                <button
+                  type="button"
+                  class="comp-split"
+                  [class.activo]="compCardEstado() === fila.estado && compCardUbicacion() === 'EN_CPU'"
+                  [disabled]="fila.enCpu === 0"
+                  (click)="seleccionarMatriz(fila.estado, 'EN_CPU')"
+                >{{ fila.enCpu }} en CPU</button>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      @if (compCardDetalle().filas.length === 0) {
+        <p class="comp-empty">Sin registros</p>
+      } @else {
+        @for (fila of compCardDetalle().filas; track fila.label) {
+          <div class="comp-card-fila">
+            <span class="comp-card-fila-label">{{ fila.label }}</span>
+            <span class="comp-card-fila-cantidad">x{{ fila.cantidad }}</span>
+          </div>
+        }
+      }
+
+      <div class="comp-popup-total">
+        <span>Total</span>
+        <strong>{{ compCardDetalle().total }}</strong>
+      </div>
+    </div>
+  }
+</p-dialog>
+
 <header class="page-header">
   <h1>Inventario Físico</h1>
-  <p-button severity="primary" (onClick)="abrirNueva()">
-    <svg data-p-icon="plus" style="width: 1rem; height: 1rem"></svg>
-    <span>Nuevo</span>
-  </p-button>
 </header>
 
 <section class="page-content">
@@ -26,7 +86,7 @@
       optionLabel="nombre"
       optionValue="id"
       [ngModel]="filtroUbicacionId()"
-      (ngModelChange)="filtroUbicacionId.set($event)"
+      (ngModelChange)="onFiltroUbicacionChange($event)"
       placeholder="Ubicación"
       [showClear]="true"
       [disabled]="ubicaciones().length === 0"
@@ -37,6 +97,41 @@
         {{ itemsFiltrados().length }} {{ itemsFiltrados().length === 1 ? 'item' : 'items' }}
       </span>
     }
+  </div>
+
+  <!-- Contadores generales de componentes (RAM / Procesador / Disco) -->
+  <section class="comp-cards-section">
+    <div class="section-head">
+      <h2 class="section-title">Componentes</h2>
+      <p-button severity="primary" size="small" (onClick)="abrirNueva(true)">
+        <svg data-p-icon="plus" style="width: 1rem; height: 1rem"></svg>
+        <span>Nuevo Componente</span>
+      </p-button>
+    </div>
+    <div class="comp-cards">
+      @for (card of componentesCards(); track card.tipo) {
+        <button
+          type="button"
+          class="comp-card"
+          [class]="'comp-card device-' + card.icono"
+          (click)="abrirCompCard(card)"
+        >
+          <span class="comp-card-icono" aria-hidden="true">
+            <app-icon [name]="card.icono" size="22px" />
+          </span>
+          <span class="comp-card-nombre">{{ card.titulo }}</span>
+          <span class="comp-card-total">{{ card.total }}</span>
+        </button>
+      }
+    </div>
+  </section>
+
+  <div class="section-head">
+    <h2 class="section-title">Dispositivos</h2>
+    <p-button severity="primary" size="small" (onClick)="abrirNueva(false)">
+      <svg data-p-icon="plus" style="width: 1rem; height: 1rem"></svg>
+      <span>Nuevo Dispositivo</span>
+    </p-button>
   </div>
 
   @if (loading()) {
@@ -52,50 +147,55 @@
     </div>
   } @else {
     <div class="grupo-lista">
-      @for (g of grupos(); track g.dispositivo.id) {
+      @for (g of grupos(); track g.key) {
         @if (g.total > 0) {
           <div class="grupo" [class]="'grupo device-' + deviceIconDe(g.dispositivo)">
             <button
               type="button"
               class="grupo-cabecera"
-              [class.abierto]="grupoAbierto() === g.dispositivo.id"
-              (click)="toggleGrupo(g.dispositivo.id)"
+              [class.abierto]="dispositivoAbierto() === g.key"
+              (click)="toggleDispositivo(g.key)"
             >
               <span class="grupo-icono" aria-hidden="true">
                 <app-icon [name]="deviceIconDe(g.dispositivo)" size="24px" />
               </span>
-              <span class="grupo-nombre">{{ g.dispositivo.nombre }}</span>
+              <span class="grupo-texto">
+                <span class="grupo-nombre">{{ g.dispositivo.nombre }}</span>
+                <span class="grupo-subtitulo">
+                  {{ g.subgrupos.length }} {{ g.subgrupos.length === 1 ? 'modelo' : 'modelos' }}
+                </span>
+              </span>
 
               <span class="contadores" (click)="$event.stopPropagation()">
                 <button
                   type="button"
                   class="contador total"
-                  [class.activo]="grupoAbierto() === g.dispositivo.id && filtroEstado() === null"
-                  (click)="filtrarPorEstado(g.dispositivo.id, null)"
+                  [class.activo]="dispositivoAbierto() === g.key && subgrupoAbierto() === null && filtroEstado() === null"
+                  (click)="filtrarDispositivo(g.key, null)"
                 >
                   <small>TOTAL</small><strong>{{ g.total }}</strong>
                 </button>
                 <button
                   type="button"
                   class="contador operativo"
-                  [class.activo]="filtroEstado() === EstadoFisico.OPERATIVO && grupoAbierto() === g.dispositivo.id"
-                  (click)="filtrarPorEstado(g.dispositivo.id, EstadoFisico.OPERATIVO)"
+                  [class.activo]="dispositivoAbierto() === g.key && filtroEstado() === EstadoFisico.OPERATIVO"
+                  (click)="filtrarDispositivo(g.key, EstadoFisico.OPERATIVO)"
                 >
                   <small>OPE</small><strong>{{ g.operativo }}</strong>
                 </button>
                 <button
                   type="button"
                   class="contador danado"
-                  [class.activo]="filtroEstado() === EstadoFisico.DANADO && grupoAbierto() === g.dispositivo.id"
-                  (click)="filtrarPorEstado(g.dispositivo.id, EstadoFisico.DANADO)"
+                  [class.activo]="dispositivoAbierto() === g.key && filtroEstado() === EstadoFisico.DANADO"
+                  (click)="filtrarDispositivo(g.key, EstadoFisico.DANADO)"
                 >
                   <small>DAÑ</small><strong>{{ g.danado }}</strong>
                 </button>
                 <button
                   type="button"
                   class="contador almacen"
-                  [class.activo]="filtroEstado() === EstadoFisico.EN_ALMACEN && grupoAbierto() === g.dispositivo.id"
-                  (click)="filtrarPorEstado(g.dispositivo.id, EstadoFisico.EN_ALMACEN)"
+                  [class.activo]="dispositivoAbierto() === g.key && filtroEstado() === EstadoFisico.EN_ALMACEN"
+                  (click)="filtrarDispositivo(g.key, EstadoFisico.EN_ALMACEN)"
                 >
                   <small>ALM</small><strong>{{ g.almacen }}</strong>
                 </button>
@@ -109,41 +209,92 @@
               <span class="seg-almacen" [style.flex]="g.almacen"></span>
             </div>
 
-            @if (grupoAbierto() === g.dispositivo.id) {
-              <div class="grupo-items">
-                @if (itemsDelGrupo().length === 0) {
-                  <p class="grupo-vacio">Sin items en este estado</p>
-                } @else {
-                  @for (item of itemsDelGrupo(); track item.id) {
-                    <div class="item-fila" (click)="abrirDetalle(item)">
-                      <span class="col-marca">{{ item.marca?.nombre }}</span>
-                      <span class="col-modelo">{{ item.modelo || '—' }}</span>
-                      <span class="col-estacion">
-                        @if (item.estacionId) {
-                          {{ estacionNombre(item.estacionId) }}
-                        } @else if (item.parentId) {
-                          {{ item.parentHostname ? 'En CPU · ' + item.parentHostname : 'En CPU' }}
+            @if (dispositivoAbierto() === g.key) {
+              <div class="subgrupo-lista">
+                @for (sg of g.subgrupos; track sg.key) {
+                  <div class="subgrupo" [class.abierto]="subgrupoAbierto() === sg.key">
+                    <button
+                      type="button"
+                      class="subgrupo-cabecera"
+                      (click)="toggleSubgrupo(sg.key)"
+                    >
+                      <span class="subgrupo-nombre">{{ sg.marca?.nombre }}{{ sg.modelo ? ' · ' + sg.modelo : '' }}</span>
+
+                      <span class="contadores" (click)="$event.stopPropagation()">
+                        <button
+                          type="button"
+                          class="contador total"
+                          [class.activo]="subgrupoAbierto() === sg.key && filtroEstado() === null"
+                          (click)="filtrarSubgrupo(sg.key, null)"
+                        >
+                          <small>TOTAL</small><strong>{{ sg.total }}</strong>
+                        </button>
+                        <button
+                          type="button"
+                          class="contador operativo"
+                          [class.activo]="subgrupoAbierto() === sg.key && filtroEstado() === EstadoFisico.OPERATIVO"
+                          (click)="filtrarSubgrupo(sg.key, EstadoFisico.OPERATIVO)"
+                        >
+                          <small>OPE</small><strong>{{ sg.operativo }}</strong>
+                        </button>
+                        <button
+                          type="button"
+                          class="contador danado"
+                          [class.activo]="subgrupoAbierto() === sg.key && filtroEstado() === EstadoFisico.DANADO"
+                          (click)="filtrarSubgrupo(sg.key, EstadoFisico.DANADO)"
+                        >
+                          <small>DAÑ</small><strong>{{ sg.danado }}</strong>
+                        </button>
+                        <button
+                          type="button"
+                          class="contador almacen"
+                          [class.activo]="subgrupoAbierto() === sg.key && filtroEstado() === EstadoFisico.EN_ALMACEN"
+                          (click)="filtrarSubgrupo(sg.key, EstadoFisico.EN_ALMACEN)"
+                        >
+                          <small>ALM</small><strong>{{ sg.almacen }}</strong>
+                        </button>
+                      </span>
+                    </button>
+
+                    @if (subgrupoAbierto() === sg.key) {
+                      <div class="grupo-items">
+                        @if (itemsDelSubgrupo().length === 0) {
+                          <p class="grupo-vacio">Sin items en este estado</p>
                         } @else {
-                          <span class="muted-sm">{{ item.estado | estadoFisico }}</span>
+                          @for (item of itemsDelSubgrupo(); track item.id) {
+                            <div class="item-fila" (click)="abrirDetalle(item)">
+                              <span class="col-marca">{{ item.marca?.nombre }}</span>
+                              <span class="col-modelo">{{ item.modelo || '—' }}</span>
+                              <span class="col-estacion">
+                                @if (item.estacionId) {
+                                  {{ estacionNombre(item.estacionId) }}
+                                } @else if (item.parentId) {
+                                  {{ item.parentHostname ? 'En CPU · ' + item.parentHostname : 'En CPU' }}
+                                } @else {
+                                  <span class="muted-sm">{{ item.estado | estadoFisico }}</span>
+                                }
+                              </span>
+                              <span class="col-acciones" (click)="$event.stopPropagation()">
+                                @if (!item.estacionId && !item.parentId) {
+                                  <p-button [text]="true" [rounded]="true" [iconOnly]="true" severity="secondary" (onClick)="abrirAsignarEstacion(item)">
+                                    <svg data-p-icon="link" style="width: 1rem; height: 1rem"></svg>
+                                  </p-button>
+                                }
+                                @if (item.estacionId) {
+                                  <p-button [text]="true" [rounded]="true" [iconOnly]="true" severity="danger" (onClick)="desasignar(item)">
+                                    <svg data-p-icon="times-circle" style="width: 1rem; height: 1rem"></svg>
+                                  </p-button>
+                                }
+                                <p-button [text]="true" [rounded]="true" [iconOnly]="true" severity="danger" (onClick)="eliminar(item)">
+                                  <svg data-p-icon="trash" style="width: 1rem; height: 1rem"></svg>
+                                </p-button>
+                              </span>
+                            </div>
+                          }
                         }
-                      </span>
-                      <span class="col-acciones" (click)="$event.stopPropagation()">
-                        @if (!item.estacionId && !item.parentId) {
-                          <p-button [text]="true" [rounded]="true" [iconOnly]="true" severity="secondary" (onClick)="abrirAsignarEstacion(item)">
-                            <svg data-p-icon="link" style="width: 1rem; height: 1rem"></svg>
-                          </p-button>
-                        }
-                        @if (item.estacionId) {
-                          <p-button [text]="true" [rounded]="true" [iconOnly]="true" severity="danger" (onClick)="desasignar(item)">
-                            <svg data-p-icon="times-circle" style="width: 1rem; height: 1rem"></svg>
-                          </p-button>
-                        }
-                        <p-button [text]="true" [rounded]="true" [iconOnly]="true" severity="danger" (onClick)="eliminar(item)">
-                          <svg data-p-icon="trash" style="width: 1rem; height: 1rem"></svg>
-                        </p-button>
-                      </span>
-                    </div>
-                  }
+                      </div>
+                    }
+                  </div>
                 }
               </div>
             }
@@ -243,6 +394,37 @@
             <svg data-p-icon="plus" style="width: 0.85rem; height: 0.85rem"></svg>
             Agregar componente
           </p-button>
+        </div>
+
+        <div class="componentes-section comp-inventario">
+          <button type="button" class="comp-inv-header" (click)="inventarioCompAbierto.set(!inventarioCompAbierto())">
+            <span class="comp-inv-caret" [class.abierto]="inventarioCompAbierto()">▸</span>
+            <span class="componentes-title">Inventario de componentes</span>
+          </button>
+
+          @if (inventarioCompAbierto()) {
+            @for (cat of inventarioComponentes(); track cat.tipo) {
+              <div class="comp-inv-cat">
+                <div class="comp-inv-cat-head">
+                  <span class="comp-inv-cat-title">{{ cat.titulo }}</span>
+                  <span class="comp-inv-cat-total">{{ cat.total }}</span>
+                </div>
+                @if (cat.items.length === 0) {
+                  <p class="comp-empty">Sin registros</p>
+                } @else {
+                  @for (row of cat.items; track row.resumen.empresa + '|' + row.resumen.dispositivo.id + '|' + row.descripcion) {
+                    <div class="comp-inv-item">
+                      <span class="comp-inv-desc">{{ row.descripcion || '—' }}</span>
+                      <span class="comp-inv-cantidad">{{ row.resumen.cantidad }}</span>
+                      @if (desgloseResumen(row.resumen); as desglose) {
+                        <span class="comp-inv-desglose">{{ desglose }}</span>
+                      }
+                    </div>
+                  }
+                }
+              </div>
+            }
+          }
         </div>
       }
 
@@ -393,7 +575,7 @@
     <div class="form-2col">
       <p-floatlabel variant="on">
         <p-select
-          [options]="dispositivos()"
+          [options]="dispositivosForm"
           optionLabel="nombre"
           optionValue="id"
           [(ngModel)]="dispositivoId"
@@ -420,20 +602,18 @@
     </div>
 
     @if (!selectedEsComponente) {
-      <div class="form-2col" [class.form-2col-solo]="!selectedRequiereSerie">
+      <div class="form-2col form-2col-solo">
         <p-floatlabel variant="on">
           <input pInputText [(ngModel)]="modelo" class="w-full" />
           <label>Modelo *</label>
         </p-floatlabel>
-
-        @if (selectedRequiereSerie) {
-          <p-floatlabel variant="on">
-            <input pInputText [(ngModel)]="serie" class="w-full" />
-            <label>Serie *</label>
-          </p-floatlabel>
-        }
       </div>
     }
+
+    <p-floatlabel variant="on">
+      <input pInputText [(ngModel)]="serie" class="w-full" />
+      <label>Serie{{ serieObligatoria ? ' *' : '' }}</label>
+    </p-floatlabel>
 
     <!-- Al crear no se ofrece: todo item nace EN ALMACÉN -->
     @if (editandoId != null) {

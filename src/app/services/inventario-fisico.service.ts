@@ -1,11 +1,13 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
   Empresa,
   InventarioFisicoRequest,
   InventarioFisicoResponse,
   InventarioFisicoUpdate,
+  ResumenDispositivo,
+  ResumenFisico,
 } from '../models/inventario.models';
 import { API_BASE } from './api-utils';
 
@@ -17,6 +19,21 @@ export class InventarioFisicoService {
 
   porEmpresa(empresa: Empresa): Observable<InventarioFisicoResponse[]> {
     return this.http.get<InventarioFisicoResponse[]>(`${this.url}/empresa/${empresa}`);
+  }
+
+  resumenEquipos(
+    empresa: Empresa,
+    filtros: { localId?: number; ubicacionId?: number; dispositivoId?: number } = {},
+  ): Observable<ResumenDispositivo[]> {
+    let params = new HttpParams();
+    if (filtros.localId != null) params = params.set('localId', filtros.localId);
+    if (filtros.ubicacionId != null) params = params.set('ubicacionId', filtros.ubicacionId);
+    if (filtros.dispositivoId != null) params = params.set('dispositivoId', filtros.dispositivoId);
+    return this.http.get<ResumenDispositivo[]>(`${this.url}/empresa/${empresa}/resumen-equipos`, { params });
+  }
+
+  resumenComponentes(empresa: Empresa): Observable<ResumenFisico[]> {
+    return this.http.get<ResumenFisico[]>(`${this.url}/empresa/${empresa}/resumen-componentes`);
   }
 
   sinAsignarPorEmpresa(empresa: Empresa): Observable<InventarioFisicoResponse[]> {

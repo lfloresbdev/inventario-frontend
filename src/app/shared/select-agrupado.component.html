@@ -1,0 +1,63 @@
+<div class="agrupado-select">
+  <button
+    type="button"
+    class="agrupado-trigger"
+    [class.placeholder]="value() == null"
+    (click)="pop.toggle($event)"
+  >
+    @if (seleccionado(); as sel) {
+      <span class="agrupado-texto">{{ sel.label }}</span>
+      <span class="agrupado-cantidades">
+        <span class="agrupado-cantidad tachado">x{{ sel.cantidad }}</span>
+        <span class="agrupado-cantidad restante">x{{ sel.cantidad - 1 }}</span>
+      </span>
+    } @else {
+      <span class="agrupado-texto">{{ opciones().length === 0 ? 'Sin stock' : placeholder() }}</span>
+    }
+    <span class="agrupado-caret" aria-hidden="true">▾</span>
+  </button>
+
+  <p-popover #pop styleClass="agrupado-pop">
+    @if (opciones().length === 0) {
+      <p class="agrupado-vacio">Sin stock</p>
+    } @else if (agrupado()) {
+      <p-accordion [multiple]="true">
+        @for (grupo of grupos(); track grupo.marca) {
+          <p-accordion-panel [value]="grupo.marca">
+            <p-accordion-header>
+              <span class="agrupado-marca-wrap">
+                <span class="agrupado-marca">{{ grupo.marca }}</span>
+                <span class="agrupado-grupo-count">x{{ grupo.cantidad }}</span>
+              </span>
+            </p-accordion-header>
+            <p-accordion-content>
+              @for (op of grupo.items; track op.id) {
+                <button
+                  type="button"
+                  class="agrupado-op"
+                  [class.sel]="value() === op.id"
+                  (click)="seleccionar(op, pop)"
+                >
+                  <span class="agrupado-texto">{{ op.label }}</span>
+                  <span class="agrupado-cantidad">x{{ op.cantidad }}</span>
+                </button>
+              }
+            </p-accordion-content>
+          </p-accordion-panel>
+        }
+      </p-accordion>
+    } @else {
+      @for (op of opciones(); track op.id) {
+        <button
+          type="button"
+          class="agrupado-op"
+          [class.sel]="value() === op.id"
+          (click)="seleccionar(op, pop)"
+        >
+          <span class="agrupado-texto">{{ op.label }}</span>
+          <span class="agrupado-cantidad">x{{ op.cantidad }}</span>
+        </button>
+      }
+    }
+  </p-popover>
+</div>

@@ -12,6 +12,7 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { DialogModule } from 'primeng/dialog';
 import { Plus } from '@primeicons/angular/plus';
 import { Pencil } from '@primeicons/angular/pencil';
 import { Trash } from '@primeicons/angular/trash';
@@ -30,6 +31,8 @@ import {
   LocalResponse,
   MarcaResponse,
   RamTipo,
+  ResumenDispositivo,
+  ResumenFisico,
   Rol,
   UbicacionFisicaResponse,
 } from '../../models/inventario.models';
@@ -41,21 +44,55 @@ import { LocalService } from '../../services/local.service';
 import { UbicacionFisicaService } from '../../services/ubicacion-fisica.service';
 import { AuthService } from '../../services/auth.service';
 import { parseApiError } from '../../services/api-utils';
-import { DISCO_CAPACIDAD_OPTIONS, DISCO_OPTIONS, EMPRESA_OPTIONS, ESTADO_FISICO_OPTIONS, PROCESADOR_OPTIONS, RAM_CAPACIDAD_OPTIONS, RAM_OPTIONS } from '../../shared/enum-options';
+import { DISCO_CAPACIDAD_OPTIONS, DISCO_LABELS, DISCO_OPTIONS, EMPRESA_OPTIONS, ESTADO_FISICO_LABELS, ESTADO_FISICO_OPTIONS, PROCESADOR_OPTIONS, RAM_CAPACIDAD_OPTIONS, RAM_LABELS, RAM_OPTIONS } from '../../shared/enum-options';
 import { RamTipoPipe, DiscoTipoPipe, EstadoFisicoPipe } from '../../shared/enum-pipes';
 import { IconComponent } from '../../shared/icon.component';
 import { deviceVisualType as resolveDeviceIcon } from '../../shared/visual-type';
 
-/** Fila de la vista agrupada: un dispositivo con sus items y los contadores por estado. */
-interface GrupoDispositivo {
-  dispositivo: DispositivoResponse;
-  items: InventarioFisicoResponse[];
+/** Subnivel de la vista agrupada: MARCA + MODELO dentro de un dispositivo. */
+interface SubgrupoFisico {
+  key: string;
+  marca?: MarcaResponse;
+  modelo?: string;
   total: number;
   operativo: number;
   danado: number;
   almacen: number;
   enReparacion: number;
   obsoleto: number;
+}
+
+/** Fila superior de la vista agrupada: un DISPOSITIVO con los contadores de todos sus modelos. */
+interface GrupoFisico {
+  key: string;
+  dispositivo: DispositivoResponse;
+  total: number;
+  operativo: number;
+  danado: number;
+  almacen: number;
+  enReparacion: number;
+  obsoleto: number;
+  subgrupos: SubgrupoFisico[];
+}
+
+/** Traduce el mapa porEstado del backend a los contadores de la vista. */
+function contarEstado(porEstado: Record<string, number> | null | undefined) {
+  const e = porEstado ?? {};
+  return {
+    operativo: e['OPERATIVO'] ?? 0,
+    danado: e['DANADO'] ?? 0,
+    almacen: e['EN_ALMACEN'] ?? 0,
+    enReparacion: e['EN_REPARACION'] ?? 0,
+    obsoleto: e['OBSOLETO'] ?? 0,
+  };
+}
+
+/** Card de la sección de componentes. */
+interface ComponenteCard {
+  tipo: string;
+  titulo: string;
+  icono: string;
+  total: number;
 }
 
 @Component({
@@ -81,6 +118,7 @@ interface GrupoDispositivo {
     DiscoTipoPipe,
     EstadoFisicoPipe,
     ConfirmDialogModule,
+    DialogModule,
     IconComponent,
   ],
   providers: [MessageService, ConfirmationService],
@@ -106,13 +144,20 @@ export class FisicoPage implements OnInit {
   ubicaciones = signal<UbicacionFisicaResponse[]>([]);
   loading = signal(false);
 
+  /** Grupos de equipos (dispositivo → marca·modelo) calculados por el backend. */
+  resumenes = signal<ResumenDispositivo[]>([]);
+  /** Grupos de componentes (RAM / Procesador / Disco) para el inventario global. */
+  resumenComp = signal<ResumenFisico[]>([]);
+
   // Signals: los consumen computed() de agrupación y filtrado
   readonly filtroLocalId = signal<number | null>(null);
   readonly filtroUbicacionId = signal<number | null>(null);
 
-  /** Dispositivo desplegado; sólo uno a la vez. */
-  readonly grupoAbierto = signal<number | null>(null);
-  /** Contador pulsado dentro del grupo abierto. null = TOTAL = sin filtro. */
+  /** Dispositivo desplegado en la lista (nivel 1); sólo uno a la vez. */
+  readonly dispositivoAbierto = signal<string | null>(null);
+  /** Subgrupo marca·modelo desplegado dentro del dispositivo (nivel 2). */
+  readonly subgrupoAbierto = signal<string | null>(null);
+  /** Contador pulsado. null = TOTAL = sin filtro; aplica a los items del subgrupo abierto. */
   readonly filtroEstado = signal<EstadoFisico | null>(null);
 
   /**
@@ -137,44 +182,47 @@ export class FisicoPage implements OnInit {
     });
   });
 
-  /** Una fila por dispositivo del catálogo, incluidos los que no tienen items. */
-  readonly grupos = computed<GrupoDispositivo[]>(() => {
-    const porDispositivo = new Map<number, InventarioFisicoResponse[]>();
-    for (const item of this.itemsFiltrados()) {
-      const id = item.dispositivo?.id;
-      if (id == null) continue;
-      const lista = porDispositivo.get(id);
-      if (lista) lista.push(item);
-      else porDispositivo.set(id, [item]);
-    }
+  /**
+   * Dos niveles: DISPOSITIVO (con contadores agregados) y dentro MARCA + MODELO.
+   * La clave incluye la empresa para no colisionar cuando el ADMIN ve las dos.
+   */
+  readonly grupos = computed<GrupoFisico[]>(() =>
+    this.resumenes().map((r) => ({
+      key: this.claveDispositivo(r),
+      dispositivo: r.dispositivo,
+      total: r.cantidad,
+      ...contarEstado(r.porEstado),
+      subgrupos: (r.subgrupos ?? []).map((s) => ({
+        key: this.claveItem(s),
+        marca: s.marca,
+        modelo: s.modelo,
+        total: s.cantidad,
+        ...contarEstado(s.porEstado),
+      })),
+    })),
+  );
 
-    return this.dispositivos()
-      .map((dispositivo) => {
-        const items = porDispositivo.get(dispositivo.id) ?? [];
-        let operativo = 0, danado = 0, almacen = 0, enReparacion = 0, obsoleto = 0;
-        for (const i of items) {
-          switch (i.estado) {
-            case EstadoFisico.OPERATIVO: operativo++; break;
-            case EstadoFisico.DANADO: danado++; break;
-            case EstadoFisico.EN_ALMACEN: almacen++; break;
-            case EstadoFisico.EN_REPARACION: enReparacion++; break;
-            case EstadoFisico.OBSOLETO: obsoleto++; break;
-          }
-        }
-        // enReparacion y obsoleto se calculan pero todavía no se pintan
-        return { dispositivo, items, total: items.length, operativo, danado, almacen, enReparacion, obsoleto };
-      })
-      .sort((a, b) => a.dispositivo.nombre.localeCompare(b.dispositivo.nombre));
-  });
+  private claveDispositivo(r: ResumenDispositivo): string {
+    return `${r.empresa ?? ''}|${r.dispositivo?.id ?? 0}`;
+  }
 
-  /** Items del grupo desplegado, ya con el filtro de estado aplicado. */
-  readonly itemsDelGrupo = computed(() => {
-    const id = this.grupoAbierto();
-    if (id == null) return [];
-    const grupo = this.grupos().find((g) => g.dispositivo.id === id);
-    if (!grupo) return [];
+  /** Clave de un subgrupo marca·modelo; sirve igual para un item suelto. */
+  private claveItem(x: {
+    empresa?: Empresa;
+    dispositivo?: DispositivoResponse;
+    marca?: MarcaResponse;
+    modelo?: string;
+  }): string {
+    return `${x.empresa ?? ''}|${x.dispositivo?.id ?? 0}|${x.marca?.id ?? 0}|${(x.modelo ?? '').trim().toLowerCase()}`;
+  }
+
+  /** Items del subgrupo marca·modelo desplegado, ya con el filtro de estado aplicado. */
+  readonly itemsDelSubgrupo = computed(() => {
+    const key = this.subgrupoAbierto();
+    if (key == null) return [];
+    const items = this.itemsFiltrados().filter((i) => this.claveItem(i) === key);
     const estado = this.filtroEstado();
-    return estado ? grupo.items.filter((i) => i.estado === estado) : grupo.items;
+    return estado ? items.filter((i) => i.estado === estado) : items;
   });
 
   detalleVisible = false;
@@ -199,6 +247,8 @@ export class FisicoPage implements OnInit {
   });
 
   drawerVisible = false;
+  /** Modo del formulario de creación: true = sólo componentes, false = sólo dispositivos. */
+  creandoComponente = false;
   editandoId: number | null = null;
   originalEstacionId: number | undefined;
 
@@ -256,6 +306,10 @@ export class FisicoPage implements OnInit {
     return this.dispositivos().find(d => d.id === this.dispositivoId)?.requiereSerie ?? true;
   }
 
+  get serieObligatoria(): boolean {
+    return !this.selectedEsComponente && this.selectedRequiereSerie;
+  }
+
   private get _selectedNombre(): string {
     return this.dispositivos().find(d => d.id === this.dispositivoId)?.nombre?.trim().toUpperCase() ?? '';
   }
@@ -283,11 +337,6 @@ export class FisicoPage implements OnInit {
   onDispositivoChange(dispositivoId: number | undefined): void {
     this.marcaId = undefined;
 
-    // Si el dispositivo nuevo no exige serie el campo se oculta, así que se
-    // descarta lo escrito: quedaría invisible y aun así se enviaría al guardar.
-    const requiereSerie = this.dispositivos().find(d => d.id === dispositivoId)?.requiereSerie ?? true;
-    if (!requiereSerie) this.serie = '';
-
     if (dispositivoId == null) {
       this.marcasFiltradas.set([]);
       return;
@@ -312,6 +361,12 @@ export class FisicoPage implements OnInit {
 
   get marcasParaForm(): MarcaResponse[] {
     return this.marcasFiltradas();
+  }
+
+  /** Al crear, la sección de origen acota el listado: Componentes o Dispositivos. Al editar, todos. */
+  get dispositivosForm(): DispositivoResponse[] {
+    if (this.editandoId != null) return this.dispositivos();
+    return this.dispositivos().filter((d) => this.esComponente(d) === this.creandoComponente);
   }
 
   agregarComponenteArmada(): void {
@@ -386,6 +441,218 @@ export class FisicoPage implements OnInit {
       return [marca, item.procesador || item.modelo].filter(Boolean).join(' - ');
     }
     return [marca, item.modelo].filter(Boolean).join(' - ');
+  }
+
+  inventarioCompAbierto = signal(false);
+
+  /** Inventario global de componentes agrupado por tipo, con desglose por estado y estación. */
+  readonly inventarioComponentes = computed(() => {
+    const grupos = this.resumenComp();
+    const tipos: { tipo: 'ram' | 'procesador' | 'disco' | 'otro'; titulo: string }[] = [
+      { tipo: 'ram', titulo: 'RAM' },
+      { tipo: 'procesador', titulo: 'Procesador' },
+      { tipo: 'disco', titulo: 'Disco' },
+    ];
+    if (grupos.some((r) => this.tipoResumen(r) === 'otro')) {
+      tipos.push({ tipo: 'otro', titulo: 'Otros' });
+    }
+    return tipos.map(({ tipo, titulo }) => {
+      const items = grupos
+        .filter((r) => this.tipoResumen(r) === tipo)
+        .map((r) => ({ resumen: r, descripcion: this.describirResumen(r) }))
+        .sort((a, b) => a.descripcion.localeCompare(b.descripcion));
+      return {
+        tipo,
+        titulo,
+        total: items.reduce((acc, i) => acc + i.resumen.cantidad, 0),
+        items,
+      };
+    });
+  });
+
+  private tipoResumen(r: ResumenFisico): 'ram' | 'procesador' | 'disco' | 'otro' {
+    const n = r.dispositivo?.nombre?.toUpperCase() ?? '';
+    if (n.includes('RAM') || n.includes('MEMORIA')) return 'ram';
+    if (n.includes('DISCO') || n === 'SSD' || n === 'HDD' || n === 'M2') return 'disco';
+    if (n.includes('PROCESADOR') || n.includes('PROCESSOR')) return 'procesador';
+    return 'otro';
+  }
+
+  private describirResumen(r: ResumenFisico): string {
+    const marca = r.marca?.nombre ?? '';
+    const tipo = this.tipoResumen(r);
+    if (tipo === 'ram') return [marca, r.ramTipo, this.capacidadLabel(r.ramEspacio)].filter(Boolean).join(' · ');
+    if (tipo === 'disco') return [marca, r.discoTipo, this.capacidadLabel(r.discoEspacio)].filter(Boolean).join(' · ');
+    if (tipo === 'procesador') return [marca, r.procesador || r.modelo].filter(Boolean).join(' · ');
+    return [marca, r.modelo].filter(Boolean).join(' · ');
+  }
+
+  desgloseResumen(r: ResumenFisico): string {
+    const partes: string[] = [];
+    if (r.enAlmacen > 0) partes.push(`${r.enAlmacen} en almacén`);
+    for (const e of r.porEstacion ?? []) partes.push(`${e.cantidad} en ${e.estacionNombre}`);
+    return partes.join(' · ');
+  }
+
+  /** Card de componentes seleccionada para el popup y filtros activos dentro del popup. */
+  compCardPopupVisible = false;
+  readonly compCardSeleccionada = signal<ComponenteCard | null>(null);
+  readonly compCardEstado = signal<EstadoFisico | null>(null);
+  readonly compCardUbicacion = signal<'SUELTO' | 'EN_CPU' | null>(null);
+
+  /** Cards de la sección de componentes: un total general por tipo. */
+  readonly componentesCards = computed<ComponenteCard[]>(() => {
+    const grupos = this.resumenComp();
+    const tipos: { tipo: string; titulo: string; icono: string }[] = [
+      { tipo: 'ram', titulo: 'RAM', icono: 'ram' },
+      { tipo: 'procesador', titulo: 'Procesador', icono: 'processor' },
+      { tipo: 'disco', titulo: 'Disco', icono: 'disk' },
+    ];
+    if (grupos.some((r) => this.tipoResumen(r) === 'otro')) {
+      tipos.push({ tipo: 'otro', titulo: 'Otros', icono: 'generic' });
+    }
+    return tipos.map(({ tipo, titulo, icono }) => ({
+      tipo,
+      titulo,
+      icono,
+      total: grupos
+        .filter((r) => this.tipoResumen(r) === tipo)
+        .reduce((acc, r) => acc + r.cantidad, 0),
+    }));
+  });
+
+  /** Detalle del popup: filas y totales según estado (null = TOTAL) y ubicación (null = todos). */
+  readonly compCardDetalle = computed(() => {
+    const card = this.compCardSeleccionada();
+    if (!card) {
+      return {
+        filas: [] as { label: string; cantidad: number }[],
+        total: 0,
+        conteo: {} as Record<string, number>,
+        ubicacion: { SUELTO: 0, EN_CPU: 0 } as Record<string, number>,
+      };
+    }
+    const delTipo = this.resumenComp().filter((r) => this.tipoResumen(r) === card.tipo);
+    const filas = this.filasComponente(
+      card.tipo,
+      delTipo,
+      this.compCardEstado(),
+      this.compCardUbicacion(),
+    );
+    const conteo: Record<string, number> = {};
+    const ubicacion: Record<string, number> = { SUELTO: 0, EN_CPU: 0 };
+    for (const r of delTipo) {
+      for (const [k, v] of Object.entries(r.porEstado ?? {})) conteo[k] = (conteo[k] ?? 0) + v;
+      ubicacion['SUELTO'] += this.cantidadComponente(r, null, 'SUELTO');
+      ubicacion['EN_CPU'] += this.cantidadComponente(r, null, 'EN_CPU');
+    }
+    return { filas, total: filas.reduce((acc, f) => acc + f.cantidad, 0), conteo, ubicacion };
+  });
+
+  /** Cantidad de un grupo de componentes para un estado y/o ubicación (true = sueltos / en CPU). */
+  private cantidadComponente(
+    r: ResumenFisico,
+    estado: EstadoFisico | null,
+    ubicacion: string | null,
+  ): number {
+    if (!estado && !ubicacion) return r.cantidad;
+    const cross = r.porEstadoUbicacion ?? {};
+    if (estado && !ubicacion) return r.porEstado?.[estado] ?? 0;
+    if (!estado && ubicacion) {
+      const sufijo = '|' + ubicacion;
+      return Object.entries(cross)
+        .filter(([k]) => k.endsWith(sufijo))
+        .reduce((acc, [, v]) => acc + v, 0);
+    }
+    return cross[`${estado}|${ubicacion}`] ?? 0;
+  }
+
+  private filasComponente(
+    tipo: string,
+    grupos: ResumenFisico[],
+    estado?: EstadoFisico | null,
+    ubicacion?: string | null,
+  ): { label: string; cantidad: number }[] {
+    const mapa = new Map<string, number>();
+    for (const r of grupos) {
+      const cantidad = this.cantidadComponente(r, estado ?? null, ubicacion ?? null);
+      if (cantidad <= 0) continue;
+      let label: string;
+      if (tipo === 'ram') {
+        label = [r.ramTipo ? RAM_LABELS[r.ramTipo] : null, this.capacidadLabel(r.ramEspacio)]
+          .filter(Boolean).join(' - ');
+      } else if (tipo === 'disco') {
+        label = [r.discoTipo ? DISCO_LABELS[r.discoTipo] : null, this.capacidadLabel(r.discoEspacio)]
+          .filter(Boolean).join(' - ');
+      } else if (tipo === 'procesador') {
+        label = [r.marca?.nombre, r.procesador || r.modelo].filter(Boolean).join(' - ');
+      } else {
+        label = [r.marca?.nombre, r.modelo].filter(Boolean).join(' - ');
+      }
+      const clave = label || '—';
+      mapa.set(clave, (mapa.get(clave) ?? 0) + cantidad);
+    }
+    return [...mapa.entries()]
+      .map(([label, cantidad]) => ({ label, cantidad }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }
+
+  abrirCompCard(card: ComponenteCard): void {
+    this.compCardSeleccionada.set(card);
+    this.compCardEstado.set(null);
+    this.compCardUbicacion.set(null);
+    this.compCardPopupVisible = true;
+  }
+
+  /**
+   * Filas de contadores por estado. Cada una trae el total y, si hay datos, el desglose
+   * suelto / en CPU. Operativo + Suelto nunca aparece (siempre 0).
+   */
+  readonly compCardMatriz = computed(() => {
+    const card = this.compCardSeleccionada();
+    if (!card) return [];
+    const delTipo = this.resumenComp().filter((r) => this.tipoResumen(r) === card.tipo);
+    const orden: { estado: EstadoFisico; corto: string }[] = [
+      { estado: EstadoFisico.OPERATIVO, corto: 'OPE' },
+      { estado: EstadoFisico.DANADO, corto: 'DAÑ' },
+      { estado: EstadoFisico.EN_ALMACEN, corto: 'ALM' },
+      { estado: EstadoFisico.EN_REPARACION, corto: 'REP' },
+      { estado: EstadoFisico.OBSOLETO, corto: 'OBS' },
+    ];
+    return orden
+      .map(({ estado, corto }) => {
+        const suelto = delTipo.reduce(
+          (acc, r) => acc + (r.porEstadoUbicacion?.[`${estado}|SUELTO`] ?? 0), 0);
+        const enCpu = delTipo.reduce(
+          (acc, r) => acc + (r.porEstadoUbicacion?.[`${estado}|EN_CPU`] ?? 0), 0);
+        const totalEstado = delTipo.reduce((acc, r) => acc + (r.porEstado?.[estado] ?? 0), 0);
+        const conSplit = suelto + enCpu > 0;
+        return {
+          estado,
+          corto,
+          label: ESTADO_FISICO_LABELS[estado],
+          suelto,
+          enCpu,
+          conSplit,
+          total: conSplit ? suelto + enCpu : totalEstado,
+        };
+      })
+      .filter((fila) => fila.total > 0);
+  });
+
+  filtrarEstado(estado: EstadoFisico): void {
+    this.compCardEstado.set(estado);
+    this.compCardUbicacion.set(null);
+  }
+
+  seleccionarMatriz(estado: EstadoFisico, ubicacion: 'SUELTO' | 'EN_CPU'): void {
+    this.compCardEstado.set(estado);
+    this.compCardUbicacion.set(ubicacion);
+  }
+
+  limpiarMatriz(): void {
+    this.compCardEstado.set(null);
+    this.compCardUbicacion.set(null);
   }
 
   get itemsRamOpciones(): { id: number; label: string }[] {
@@ -479,6 +746,35 @@ export class FisicoPage implements OnInit {
         this.ms.add({ severity: 'error', summary: 'Error', detail: parseApiError(err).mensaje, life: 5000 });
       },
     });
+
+    this.cargarResumen(empresa);
+    this.cargarResumenComponentes(empresa);
+  }
+
+  /** Agrupación de equipos calculada por el backend (respeta el filtro Local / Ubicación). */
+  private cargarResumen(empresa?: Empresa | null): void {
+    const filtros = {
+      localId: this.filtroLocalId() ?? undefined,
+      ubicacionId: this.filtroUbicacionId() ?? undefined,
+    };
+    const resumen$ = empresa
+      ? this.service.resumenEquipos(empresa, filtros)
+      : forkJoin([
+          this.service.resumenEquipos(Empresa.LYBTEL, filtros),
+          this.service.resumenEquipos(Empresa.RUNA, filtros),
+        ]).pipe(map(([a, b]) => [...a, ...b]));
+    resumen$.subscribe({ next: (r) => this.resumenes.set(r), error: () => {} });
+  }
+
+  /** Inventario global de componentes (RAM / Procesador / Disco). */
+  private cargarResumenComponentes(empresa?: Empresa | null): void {
+    const resumen$ = empresa
+      ? this.service.resumenComponentes(empresa)
+      : forkJoin([
+          this.service.resumenComponentes(Empresa.LYBTEL),
+          this.service.resumenComponentes(Empresa.RUNA),
+        ]).pipe(map(([a, b]) => [...a, ...b]));
+    resumen$.subscribe({ next: (r) => this.resumenComp.set(r), error: () => {} });
   }
 
   onFiltroLocalChange(localId: number | null): void {
@@ -491,6 +787,12 @@ export class FisicoPage implements OnInit {
         error: () => {},
       });
     }
+    this.cargarResumen(this.auth.empresa());
+  }
+
+  onFiltroUbicacionChange(ubicacionId: number | null): void {
+    this.filtroUbicacionId.set(ubicacionId);
+    this.cargarResumen(this.auth.empresa());
   }
 
   /**
@@ -501,15 +803,28 @@ export class FisicoPage implements OnInit {
     this.cargarTodos();
   }
 
-  toggleGrupo(dispositivoId: number): void {
-    const yaAbierto = this.grupoAbierto() === dispositivoId;
-    this.grupoAbierto.set(yaAbierto ? null : dispositivoId);
+  toggleDispositivo(key: string): void {
+    const yaAbierto = this.dispositivoAbierto() === key;
+    this.dispositivoAbierto.set(yaAbierto ? null : key);
+    this.subgrupoAbierto.set(null);
     if (!yaAbierto) this.filtroEstado.set(null);
   }
 
-  /** Pulsar un contador despliega el grupo y filtra; TOTAL pasa null y limpia el filtro. */
-  filtrarPorEstado(dispositivoId: number, estado: EstadoFisico | null): void {
-    this.grupoAbierto.set(dispositivoId);
+  /** Contador del dispositivo: TOTAL abre sin filtro; OPE/DAÑ/ALM abre y filtra todos sus modelos. */
+  filtrarDispositivo(key: string, estado: EstadoFisico | null): void {
+    this.dispositivoAbierto.set(key);
+    this.subgrupoAbierto.set(null);
+    this.filtroEstado.set(estado);
+  }
+
+  toggleSubgrupo(key: string): void {
+    const yaAbierto = this.subgrupoAbierto() === key;
+    this.subgrupoAbierto.set(yaAbierto ? null : key);
+  }
+
+  /** Contador del subgrupo marca·modelo: despliega y filtra sus items. */
+  filtrarSubgrupo(key: string, estado: EstadoFisico | null): void {
+    this.subgrupoAbierto.set(key);
     this.filtroEstado.set(estado);
   }
 
@@ -597,8 +912,9 @@ export class FisicoPage implements OnInit {
     this.abrirEditar(det);
   }
 
-  abrirNueva(): void {
+  abrirNueva(soloComponentes: boolean): void {
     this.editandoId = null;
+    this.creandoComponente = soloComponentes;
     this.originalEstacionId = undefined;
     this.resetForm();
     this.drawerVisible = true;
@@ -663,7 +979,7 @@ export class FisicoPage implements OnInit {
       this.ms.add({ severity: 'warn', summary: 'Faltan datos', detail: 'Dispositivo y marca son obligatorios', life: 3000 });
       return;
     }
-    if (!this.selectedEsComponente && this.selectedRequiereSerie && !this.serie.trim()) {
+    if (this.serieObligatoria && !this.serie.trim()) {
       this.ms.add({
         severity: 'warn',
         summary: 'Faltan datos',
@@ -699,7 +1015,9 @@ export class FisicoPage implements OnInit {
 
     const request: InventarioFisicoRequest = { empresa, dispositivoId: this.dispositivoId, marcaId: this.marcaId };
     if (this.modelo.trim()) request.modelo = this.modelo.trim();
-    if (this.serie.trim()) request.serie = this.serie.trim();
+    if (this.editandoId != null || this.serie.trim()) {
+      request.serie = this.serie.trim();
+    }
     if (this.ramTipo) request.ramTipo = this.ramTipo;
     if (this.ramEspacio != null) request.ramEspacio = this.ramEspacio;
     if (this.procesador.trim()) request.procesador = this.procesador.trim();

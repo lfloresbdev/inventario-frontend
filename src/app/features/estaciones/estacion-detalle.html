@@ -42,34 +42,37 @@
             <p class="muted">Sin inventario físico</p>
           } @else {
             <div class="item-list">
-              @for (f of fisicos(); track f.id) {
+              @for (g of fisicosAgrupados(); track g.item.id) {
                 <div class="item">
                   <div class="item-main">
-                    <span class="item-title" [class]="'item-title device-' + deviceIcon(f)">
-                      <app-icon [name]="deviceIcon(f)" size="1rem" />
-                      {{ f.dispositivo?.nombre }}
+                    <span class="item-title" [class]="'item-title device-' + deviceIcon(g.item)">
+                      <app-icon [name]="deviceIcon(g.item)" size="1rem" />
+                      {{ g.item.dispositivo?.nombre }}
+                      @if (g.cantidad > 1) {
+                        <span class="item-count">x{{ g.cantidad }}</span>
+                      }
                     </span>
                     <div class="item-main-end">
-                      <p-tag [value]="f.marca?.nombre" severity="secondary" />
-                      <p-button [text]="true" [rounded]="true" [iconOnly]="true" severity="danger" pTooltip="Liberar" tooltipPosition="left" (onClick)="liberarFisico(f)">
+                      <p-tag [value]="g.item.marca?.nombre" severity="secondary" />
+                      <p-button [text]="true" [rounded]="true" [iconOnly]="true" severity="danger" pTooltip="Liberar" tooltipPosition="left" (onClick)="liberarGrupo(g)">
                         <svg data-p-icon="minus-circle" style="width: 1rem; height: 1rem"></svg>
                       </p-button>
                     </div>
                   </div>
                   <div class="item-meta">
-                    @if (f.modelo) { <span>{{ f.modelo }}</span> }
-                    @if (f.serie) { <span>{{ f.serie }}</span> }
-                    @if (f.procesador) { <span>{{ f.procesador }}</span> }
-                    @if (f.ramTipo) { <span>{{ f.ramTipo | ramTipo }} {{ f.ramEspacio }}GB</span> }
-                    @if (f.discoTipo) { <span>{{ f.discoTipo | discoTipo }} {{ f.discoEspacio }}GB</span> }
-                    @if (f.pulgadas) { <span>{{ f.pulgadas }}"</span> }
+                    @if (g.item.modelo && !esCable(g.item)) { <span>{{ g.item.modelo }}</span> }
+                    @if (g.item.serie) { <span>{{ g.item.serie }}</span> }
+                    @if (g.item.procesador) { <span>{{ g.item.procesador }}</span> }
+                    @if (g.item.ramTipo) { <span>{{ g.item.ramTipo | ramTipo }} {{ g.item.ramEspacio }}GB</span> }
+                    @if (g.item.discoTipo) { <span>{{ g.item.discoTipo | discoTipo }} {{ g.item.discoEspacio }}GB</span> }
+                    @if (g.item.pulgadas) { <span>{{ g.item.pulgadas }}"</span> }
                   </div>
                 </div>
               }
             </div>
           }
           <div style="margin-top: 1rem">
-            <p-button severity="secondary" [outlined]="true" size="small" (onClick)="abrirAgregarItem()">
+            <p-button severity="secondary" [outlined]="true" size="small" [disabled]="estacionCompleta()" (onClick)="abrirAgregarItem()">
               <svg data-p-icon="plus" style="width: 0.85rem; height: 0.85rem"></svg>
               Agregar item
             </p-button>
@@ -111,23 +114,73 @@
   styleClass="form-drawer"
   [showCloseIcon]="true"
 >
-  <div class="form-grid">
-    <p-floatlabel variant="on">
-      <p-select
-        [options]="itemsLibresOpciones()"
-        optionLabel="label"
-        optionValue="id"
-        [(ngModel)]="itemAsignarId"
-        class="w-full"
-        placeholder="—"
-        [filter]="true"
-        filterBy="label"
-      />
-      <label>Item libre *</label>
-    </p-floatlabel>
-    <div class="form-actions">
-      <p-button severity="secondary" [outlined]="true" (onClick)="agregarItemVisible = false"><app-icon name="close" size="0.9rem" />Cancelar</p-button>
-      <p-button severity="primary" (onClick)="confirmarAgregarItem()">Agregar</p-button>
-    </div>
+  @if (categoriasAgregables().length === 0) {
+    <p class="muted">La estación ya tiene todos los dispositivos permitidos.</p>
+  } @else {
+    <p-accordion [multiple]="true">
+      @for (cat of categoriasAgregables(); track cat.key) {
+        <p-accordion-panel [value]="cat.key">
+          <p-accordion-header>
+            <span class="cat-head">
+              <app-icon [name]="cat.icon" size="1rem" />
+              <span class="cat-label">{{ cat.label }}</span>
+              <span class="cat-pend">{{ cat.items.length }} disponible{{ cat.items.length === 1 ? '' : 's' }}</span>
+            </span>
+          </p-accordion-header>
+          <p-accordion-content>
+            @if (cat.key === 'PODER') {
+              <div class="cable-counter">
+                <div class="cable-stepper">
+                  <button type="button" class="cable-btn" (click)="cambiarCablesAdd(-1)" [disabled]="cantidadCablesPoderAdd <= 0" aria-label="Quitar">−</button>
+                  <span class="cable-valor">{{ cantidadCablesPoderAdd }}</span>
+                  <button type="button" class="cable-btn" (click)="cambiarCablesAdd(1)" [disabled]="cantidadCablesPoderAdd >= maxCablesPoderAdd()" aria-label="Agregar">+</button>
+                </div>
+                <span class="cable-info">Total restante</span>
+                <span class="cable-cantidades">
+                  <span class="cable-cantidad" [class.tachado]="cantidadCablesPoderAdd > 0">x{{ cablesPoderLibres().length }}</span>
+                  @if (cantidadCablesPoderAdd > 0) {
+                    <span class="cable-cantidad restante">x{{ cablesPoderAddRestantes }}</span>
+                  }
+                </span>
+                <p-button size="small" [disabled]="cantidadCablesPoderAdd === 0" (onClick)="agregarCablesPoder()">Agregar</p-button>
+              </div>
+            } @else if (cat.key === 'VIDEO') {
+              <div class="cat-opciones">
+                @for (op of cat.opciones; track op.id) {
+                  <button type="button" class="cat-op" (click)="onCategoriaSeleccion(op.id)">
+                    <span class="cat-op-label">{{ op.label }}</span>
+                    <span class="cat-op-cant">x{{ op.cantidad }}</span>
+                  </button>
+                }
+              </div>
+            } @else {
+              <p-accordion [multiple]="true">
+                @for (grupo of gruposDe(cat.opciones); track grupo.marca) {
+                  <p-accordion-panel [value]="grupo.marca">
+                    <p-accordion-header>
+                      <span class="cat-grupo-head">
+                        <span class="cat-grupo-marca">{{ grupo.marca }}</span>
+                        <span class="cat-grupo-count">x{{ grupo.cantidad }}</span>
+                      </span>
+                    </p-accordion-header>
+                    <p-accordion-content>
+                      @for (op of grupo.items; track op.id) {
+                        <button type="button" class="cat-op" (click)="onCategoriaSeleccion(op.id)">
+                          <span class="cat-op-label">{{ op.label }}</span>
+                          <span class="cat-op-cant">x{{ op.cantidad }}</span>
+                        </button>
+                      }
+                    </p-accordion-content>
+                  </p-accordion-panel>
+                }
+              </p-accordion>
+            }
+          </p-accordion-content>
+        </p-accordion-panel>
+      }
+    </p-accordion>
+  }
+  <div class="form-actions">
+    <p-button severity="secondary" [outlined]="true" (onClick)="agregarItemVisible = false"><app-icon name="close" size="0.9rem" />Cerrar</p-button>
   </div>
 </p-drawer>

@@ -36,6 +36,7 @@ import { AuthService } from '../../services/auth.service';
 import { parseApiError } from '../../services/api-utils';
 import { EMPRESA_OPTIONS } from '../../shared/enum-options';
 import { IconComponent } from '../../shared/icon.component';
+import { OpcionAgrupada, SelectAgrupadoComponent } from '../../shared/select-agrupado.component';
 
 interface ItemOpcion { id: number; label: string; }
 
@@ -43,6 +44,7 @@ interface ItemOpcion { id: number; label: string; }
   selector: 'app-estaciones',
   imports: [
     IconComponent,
+    SelectAgrupadoComponent,
     FormsModule,
     RouterLink,
     ButtonModule,
@@ -109,8 +111,8 @@ export class EstacionesPage implements OnInit {
   selTeclado: number | null = null;
   selMouse: number | null = null;
   selAudifonos: number | null = null;
-  selCablePoder1: number | null = null;
-  selCablePoder2: number | null = null;
+  /** Cantidad de cables de poder a asignar (máx 2 por regla de negocio). */
+  cantidadCablesPoder = 0;
   selCableVideo: number | null = null; // VGA o HDMI
 
   // Selects de dispositivos — Laptop
@@ -190,7 +192,11 @@ export class EstacionesPage implements OnInit {
   cargarItemsDisponibles(empresa: Empresa): void {
     this.loadingItems = true;
     this.fisicoService.sinAsignarPorEmpresa(empresa).subscribe({
-      next: (data) => { this.itemsDisponibles.set(data); this.loadingItems = false; },
+      next: (data) => {
+        this.itemsDisponibles.set(data);
+        this.cantidadCablesPoder = this.maxCablesPoder;
+        this.loadingItems = false;
+      },
       error: () => { this.loadingItems = false; },
     });
   }
@@ -240,28 +246,71 @@ export class EstacionesPage implements OnInit {
     return items.map((i) => ({ id: i.id, label: this.itemLabel(i) }));
   }
 
-  readonly cpuOpciones     = computed(() => this.toOpciones(this.itemsPorDispositivo('CPU')));
-  readonly monitorOpciones  = computed(() => this.toOpciones(this.itemsPorDispositivo('MONITOR')));
-  readonly tecladoOpciones  = computed(() => this.toOpciones(this.itemsPorDispositivo('TECLADO')));
-  readonly mouseOpciones    = computed(() => this.toOpciones(this.itemsPorDispositivo('MOUSE')));
-  readonly aufifonosOpciones = computed(() => this.toOpciones(this.itemsPorDispositivo('AUDÍFONOS')));
-  get cablePoder1Opciones(): ItemOpcion[] {
-    return this.toOpciones(
-      this.itemsPorDispositivo('CABLE PODER').filter((i) => i.id !== this.selCablePoder2),
-    );
+  /** Agrupa items idénticos (marca + modelo [, + pulgadas]) en una opción con su conteo. */
+  private agruparItems(items: InventarioFisicoResponse[], conPulgadas = false): OpcionAgrupada[] {
+    const grupos = new Map<string, { item: InventarioFisicoResponse; cantidad: number }>();
+    for (const i of items) {
+      const clave = [i.marca?.nombre ?? '', i.modelo ?? '', conPulgadas ? i.pulgadas ?? '' : '']
+        .join('|').toLowerCase();
+      const g = grupos.get(clave);
+      if (g) g.cantidad++;
+      else grupos.set(clave, { item: i, cantidad: 1 });
+    }
+    return [...grupos.values()].map(({ item, cantidad }) => ({
+      id: item.id,
+      label: this.itemGroupLabel(item, conPulgadas),
+      cantidad,
+      marca: item.marca?.nombre ?? 'Sin marca',
+    }));
   }
 
-  get cablePoder2Opciones(): ItemOpcion[] {
-    return this.toOpciones(
-      this.itemsPorDispositivo('CABLE PODER').filter((i) => i.id !== this.selCablePoder1),
-    );
+  private itemGroupLabel(item: InventarioFisicoResponse, conPulgadas: boolean): string {
+    const parts: string[] = [];
+    if (item.marca?.nombre) parts.push(item.marca.nombre);
+    if (item.modelo) parts.push(item.modelo);
+    if (conPulgadas && item.pulgadas != null) parts.push(`${item.pulgadas}"`);
+    return parts.join(' · ') || (item.dispositivo?.nombre ?? 'Item');
   }
-  readonly cableVideoOpciones = computed(() =>
-    this.itemsCableVideo().map((i) => ({
-      id: i.id,
-      label: `${i.dispositivo?.nombre ?? ''} · ${this.itemLabel(i)}`,
-    }))
-  );
+
+  /** Cables de video agrupados por dispositivo (CABLE VGA / CABLE HDMI) con su conteo total. */
+  private agruparCableVideo(items: InventarioFisicoResponse[]): OpcionAgrupada[] {
+    const grupos = new Map<string, { item: InventarioFisicoResponse; cantidad: number }>();
+    for (const i of items) {
+      const dispositivo = i.dispositivo?.nombre ?? 'Cable';
+      const g = grupos.get(dispositivo);
+      if (g) g.cantidad++;
+      else grupos.set(dispositivo, { item: i, cantidad: 1 });
+    }
+    return [...grupos.values()].map(({ item, cantidad }) => ({
+      id: item.id,
+      label: item.dispositivo?.nombre ?? 'Cable',
+      cantidad,
+      marca: item.dispositivo?.nombre ?? 'Cable',
+    }));
+  }
+
+  readonly cpuOpciones     = computed(() => this.toOpciones(this.itemsPorDispositivo('CPU')));
+  readonly monitorOpciones  = computed(() => this.agruparItems(this.itemsPorDispositivo('MONITOR'), true));
+  readonly tecladoOpciones  = computed(() => this.agruparItems(this.itemsPorDispositivo('TECLADO')));
+  readonly mouseOpciones    = computed(() => this.agruparItems(this.itemsPorDispositivo('MOUSE')));
+  readonly aufifonosOpciones = computed(() => this.agruparItems(this.itemsPorDispositivo('AUDÍFONOS')));
+  /** Cables de poder libres y cuántos quedarían según lo elegido en el contador. */
+  get cablesPoderDisponibles(): number {
+    return this.itemsPorDispositivo('CABLE PODER').length;
+  }
+
+  get maxCablesPoder(): number {
+    return Math.min(2, this.cablesPoderDisponibles);
+  }
+
+  get cablesPoderRestantes(): number {
+    return Math.max(0, this.cablesPoderDisponibles - this.cantidadCablesPoder);
+  }
+
+  cambiarCables(delta: number): void {
+    this.cantidadCablesPoder = Math.min(Math.max(0, this.cantidadCablesPoder + delta), this.maxCablesPoder);
+  }
+  readonly cableVideoOpciones = computed(() => this.agruparCableVideo(this.itemsCableVideo()));
   readonly laptopOpciones   = computed(() => this.toOpciones(this.itemsPorDispositivo('LAPTOP')));
   readonly cargadorOpciones = computed(() => this.toOpciones(this.itemsPorDispositivo('CARGADOR')));
 
@@ -285,16 +334,15 @@ export class EstacionesPage implements OnInit {
       itemIds = [this.selLaptop, this.selCargador];
     } else {
       if (!this.selCpu || !this.selMonitor || !this.selTeclado || !this.selMouse ||
-          !this.selAudifonos || !this.selCablePoder1 || !this.selCablePoder2 || !this.selCableVideo) {
+          !this.selAudifonos || !this.selCableVideo) {
         this.ms.add({ severity: 'warn', summary: 'Faltan datos', detail: 'Completa todos los dispositivos de escritorio', life: 3000 });
         return;
       }
-      if (this.selCablePoder1 === this.selCablePoder2) {
-        this.ms.add({ severity: 'warn', summary: 'Item duplicado', detail: 'Los dos cables de poder deben ser diferentes', life: 3000 });
-        return;
-      }
+      const cablesPoder = this.itemsPorDispositivo('CABLE PODER')
+        .slice(0, this.cantidadCablesPoder)
+        .map((i) => i.id);
       itemIds = [this.selCpu, this.selMonitor, this.selTeclado, this.selMouse,
-                 this.selAudifonos, this.selCablePoder1, this.selCablePoder2, this.selCableVideo];
+                 this.selAudifonos, ...cablesPoder, this.selCableVideo];
     }
 
     const req = { empresa, localId: this.localId, ubicacionFisicaId: this.ubicacionFisicaId, itemIds };
@@ -324,7 +372,7 @@ export class EstacionesPage implements OnInit {
   resetSelects(): void {
     this.selCpu = null; this.selMonitor = null; this.selTeclado = null;
     this.selMouse = null; this.selAudifonos = null;
-    this.selCablePoder1 = null; this.selCablePoder2 = null; this.selCableVideo = null;
+    this.cantidadCablesPoder = 0; this.selCableVideo = null;
     this.selLaptop = null; this.selCargador = null;
   }
 

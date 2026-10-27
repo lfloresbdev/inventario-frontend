@@ -166,6 +166,39 @@ export interface ContrasenaResponse {
   contrasena: string;
 }
 
+export interface EstacionConteo {
+  estacionId: number;
+  estacionNombre: string;
+  cantidad: number;
+}
+
+export interface ResumenFisico {
+  empresa: Empresa;
+  dispositivo: DispositivoResponse;
+  marca: MarcaResponse;
+  modelo?: string;
+  ramTipo?: RamTipo;
+  ramEspacio?: number;
+  discoTipo?: DiscoTipo;
+  discoEspacio?: number;
+  procesador?: string;
+  cantidad: number;
+  enAlmacen: number;
+  porEstado: Record<string, number>;
+  porEstadoUbicacion: Record<string, number>;
+  porEstacion: EstacionConteo[];
+}
+
+export interface ResumenDispositivo {
+  empresa: Empresa;
+  dispositivo: DispositivoResponse;
+  cantidad: number;
+  enAlmacen: number;
+  porEstado: Record<string, number>;
+  porEstacion: EstacionConteo[];
+  subgrupos: ResumenFisico[];
+}
+
 export interface ErrorResponseDTO {
   timestamp: string;
   status: number;
